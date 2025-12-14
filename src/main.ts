@@ -4,9 +4,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    cors: {
+      origin: '*',
+    },
+  });
 
-  // Enable validation
+  app.setGlobalPrefix('api/v1');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -14,13 +19,13 @@ async function bootstrap() {
     }),
   );
 
-  // Setup Swagger
   const config = new DocumentBuilder()
     .setTitle('Soma API')
     .setDescription(
       'The Soma (Reddit-like community platform) API documentation',
     )
     .setVersion('1.0')
+    .addServer('/api/v1', 'API v1')
     .addBearerAuth(
       {
         type: 'http',
@@ -37,7 +42,9 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/v1/docs', app, document, {
+    jsonDocumentUrl: 'api/v1/openapi.json',
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
