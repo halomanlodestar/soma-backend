@@ -1,26 +1,74 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { CreateAwardDto } from './dto/create-award.dto';
-import { UpdateAwardDto } from './dto/update-award.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AwardTargetType } from '../../prisma/generated/client';
+import { Award } from './entities/award.entity';
 
 @Injectable()
 export class AwardsService {
-  create(createAwardDto: CreateAwardDto) {
-    return 'This action adds a new award';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(userId: string, createAwardDto: CreateAwardDto): Promise<Award> {
+    const { targetType, targetId, name } = createAwardDto;
+
+    await this.validateTarget(targetType, targetId);
+
+    return this.prisma.award.create({
+      data: {
+        awardedById: userId,
+        targetType,
+        targetId,
+        name,
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all awards`;
+  async findAllByPost(postId: string): Promise<Award[]> {
+    return this.prisma.award.findMany({
+      where: {
+        targetType: AwardTargetType.POST,
+        targetId: postId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} award`;
+  async findAllByComment(commentId: string): Promise<Award[]> {
+    return this.prisma.award.findMany({
+      where: {
+        targetType: AwardTargetType.COMMENT,
+        targetId: commentId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
-  update(id: number, updateAwardDto: UpdateAwardDto) {
-    return `This action updates a #${id} award`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} award`;
+  private async validateTarget(
+    targetType: AwardTargetType,
+    targetId: string,
+  ): Promise<void> {
+    if (targetType === AwardTargetType.POST) {
+      const post = await this.prisma.post.findUnique({
+        where: { id: targetId },
+      });
+      if (!post) {
+        throw new BadRequestException(`Post with id '${targetId}' not found`);
+      }
+    } else if (targetType === AwardTargetType.COMMENT) {
+      const comment = await this.prisma.comment.findUnique({
+        where: { id: targetId },
+      });
+      if (!comment) {
+        throw new BadRequestException(
+          `Comment with id '${targetId}' not found`,
+        );
+      }
+    } else {
+      throw new BadRequestException(`Invalid target type '${targetType}'`);
+    }
   }
 }
