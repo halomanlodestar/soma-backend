@@ -9,12 +9,16 @@ import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { LoginResponseDto } from './dto/login-response.dto';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { ConfigService } from '@nestjs/config';
+import { Res } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
@@ -24,11 +28,15 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  googleAuthRedirect(@Req() req: Request): LoginResponseDto {
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.authService.login(req.user);
+    const { accessToken } = await this.authService.login(req.user as any);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return res.redirect(
+      `${frontendUrl}/auth/callback?accessToken=${accessToken}`,
+    );
   }
 
   @Get('me')
