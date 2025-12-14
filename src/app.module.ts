@@ -10,6 +10,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { ConfigModule } from './config/config.module';
 import { MediaModule } from './modules/media/media.module';
 import { AwardsModule } from './modules/awards/awards.module';
+import { FeedModule } from './modules/feed/feed.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AwardsModule } from './modules/awards/awards.module';
     ConfigModule,
     MediaModule,
     AwardsModule,
+    FeedModule,
   ],
   providers: [PrismaService],
 })
