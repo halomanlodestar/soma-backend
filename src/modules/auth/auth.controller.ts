@@ -1,9 +1,16 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { LoginResponseDto } from './dto/login-response.dto';
+import type { Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -11,19 +18,22 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {
-    // Initiates Google OAuth flow
+  googleAuth() {
+    // Guard redirects to Google OAuth - no implementation needed
   }
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleAuthRedirect(@Req() req): Promise<LoginResponseDto> {
+  googleAuthRedirect(@Req() req: Request): LoginResponseDto {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.authService.login(req.user);
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getCurrentUser(@CurrentUser() user: any) {
+  getCurrentUser(@CurrentUser() user: Express.User) {
     return user;
   }
 }

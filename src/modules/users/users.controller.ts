@@ -11,14 +11,16 @@ export class UsersController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMyProfile(@CurrentUser() user: any): Promise<UserResponseDto> {
+  async getMyProfile(
+    @CurrentUser() user: Express.User,
+  ): Promise<UserResponseDto> {
     return this.usersService.findById(user.id);
   }
 
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   async updateMyProfile(
-    @CurrentUser() user: any,
+    @CurrentUser() user: Express.User,
     @Body() updateUserProfileDto: UpdateUserProfileDto,
   ): Promise<UserResponseDto> {
     return this.usersService.updateProfile(user.id, updateUserProfileDto);
