@@ -32,8 +32,11 @@ export class AuthController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    const { accessToken } = await this.authService.login(req.user as any);
+
+    const { accessToken } = await this.authService.login(req.user);
+
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
     return res.redirect(
       `${frontendUrl}/auth/callback?accessToken=${accessToken}`,
     );
