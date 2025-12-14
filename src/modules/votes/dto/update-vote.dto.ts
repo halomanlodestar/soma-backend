@@ -1,4 +1,1 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateVoteDto } from './create-vote.dto';
-
-export class UpdateVoteDto extends PartialType(CreateVoteDto) {}
+// This file is intentionally left empty as we use upsert strategy
