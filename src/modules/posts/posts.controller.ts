@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -30,6 +31,16 @@ export class PostsController {
     @Body() createPostDto: CreatePostDto,
   ): Promise<PostEntity> {
     return this.postsService.create(user.id, createPostDto);
+  }
+
+  @Get('posts')
+  findTopPosts(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<PostEntity[]> {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 20;
+    return this.postsService.findTopPosts(pageNum, limitNum);
   }
 
   @Get('somas/:somaId/posts')

@@ -16,7 +16,6 @@ export class PostsService {
   async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
     const { title, body, somaId } = createPostDto;
 
-    // Verify soma exists
     const soma = await this.prisma.soma.findUnique({
       where: { id: somaId },
     });
@@ -42,6 +41,40 @@ export class PostsService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async findTopPosts(page = 1, limit = 20): Promise<Post[]> {
+    const skip = (page - 1) * limit;
+
+    const posts = await this.prisma.post.findMany({
+      take: limit,
+      skip,
+      include: {
+        votes: {
+          select: {
+            value: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const postsWithScores = posts.map((post) => {
+      const score = post.votes.reduce((sum, vote) => sum + vote.value, 0);
+      const { ...postData } = post;
+      return { ...postData, score };
+    });
+
+    postsWithScores.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+
+    return postsWithScores.map(({ ...post }) => post);
   }
 
   async findOne(id: string): Promise<Post> {

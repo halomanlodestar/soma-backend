@@ -79,6 +79,7 @@ model Post {
 
   authorId    String
   somaId      String
+  impressions Int      @default(0)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

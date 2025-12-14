@@ -4,6 +4,7 @@ export class Post {
   body: string | null;
   authorId: string;
   somaId: string;
+  impressions: number;
   createdAt: Date;
   updatedAt: Date;
 }
