@@ -6,10 +6,14 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AttachMediaDto } from './dto/update-media.dto';
 import { MediaCollection } from './entities/media.entity';
+import { PostsService } from '../posts/posts.service';
 
 @Injectable()
 export class MediaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly postsService: PostsService,
+  ) {}
 
   async attachMediaToPost(
     userId: string,
@@ -17,29 +21,23 @@ export class MediaService {
     postId: string,
     attachMediaDto: AttachMediaDto,
   ): Promise<MediaCollection> {
-    // Verify post exists
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-    });
+    const post = await this.postsService.findOne(postId);
 
     if (!post) {
       throw new NotFoundException(`Post with id '${postId}' not found`);
     }
 
-    // Check authorization: must be post author or ADMIN
     if (post.authorId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException(
         'You can only attach media to your own posts unless you are an admin',
       );
     }
 
-    // Check if media collection already exists
     let collection = await this.prisma.mediaCollection.findUnique({
       where: { postId },
       include: { items: true },
     });
 
-    // Create collection if it doesn't exist
     if (!collection) {
       collection = await this.prisma.mediaCollection.create({
         data: {
@@ -55,7 +53,6 @@ export class MediaService {
         include: { items: true },
       });
     } else {
-      // Add new media items to existing collection
       await this.prisma.mediaItem.createMany({
         data: attachMediaDto.media.map((item) => ({
           collectionId: collection!.id,

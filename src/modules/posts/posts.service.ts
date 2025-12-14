@@ -116,7 +116,6 @@ export class PostsService {
   ): Promise<Post> {
     const post = await this.findOne(postId);
 
-    // Check authorization: must be author or ADMIN
     if (post.authorId !== userId && userRole !== 'ADMIN') {
       throw new ForbiddenException(
         'You can only delete your own posts unless you are an admin',
