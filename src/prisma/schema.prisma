@@ -7,3 +7,184 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ENUMS
+
+enum UserRole {
+  VIEWER
+  CREATOR
+  ADMIN
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum VoteTargetType {
+  POST
+  COMMENT
+}
+
+enum MediaQuality {
+  ORIGINAL
+  HIGH
+  MEDIUM
+  LOW
+  PREVIEW
+}
+
+enum AwardTargetType {
+  POST
+  COMMENT
+}
+
+// MODELS
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  username    String   @unique
+  displayName String?
+  bio         String?
+
+  role        UserRole @default(VIEWER)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts       Post[]
+  comments    Comment[]
+  votes       Vote[]
+  awardsGiven Award[]  @relation("awardedBy")
+}
+
+model Soma {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts       Post[]
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  title       String
+  body        String?
+
+  authorId    String
+  somaId      String
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      User     @relation(fields: [authorId], references: [id])
+  soma        Soma     @relation(fields: [somaId], references: [id])
+
+  comments    Comment[]
+  media       MediaCollection?
+  votes       Vote[]
+  awards      Award[]
+}
+
+model Comment {
+  id              String   @id @default(uuid())
+  content         String
+
+  authorId        String
+  postId          String
+  parentCommentId String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  author          User     @relation(fields: [authorId], references: [id])
+  post            Post     @relation(fields: [postId], references: [id])
+  parent          Comment? @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  children        Comment[] @relation("CommentToComment")
+
+  votes           Vote[]
+  awards          Award[]
+}
+
+model Vote {
+  id         String         @id @default(uuid())
+  userId     String
+
+  targetType VoteTargetType
+  targetId   String
+
+  value      Int            // +1 or -1
+
+  createdAt  DateTime       @default(now())
+
+  user       User           @relation(fields: [userId], references: [id])
+
+  posts Post[]
+  comments Comment[]
+
+  @@unique([userId, targetType, targetId])
+}
+
+model MediaCollection {
+  id        String      @id @default(uuid())
+  postId    String      @unique
+
+  createdAt DateTime    @default(now())
+
+  post      Post        @relation(fields: [postId], references: [id])
+  items     MediaItem[]
+}
+
+model MediaItem {
+  id           String          @id @default(uuid())
+  collectionId String
+
+  type         MediaType
+  originalUrl  String
+  metadata     Json?
+
+  createdAt    DateTime        @default(now())
+
+  collection   MediaCollection @relation(fields: [collectionId], references: [id])
+  variants     MediaVariant[]
+}
+
+model MediaVariant {
+  id          String       @id @default(uuid())
+  mediaItemId String
+
+  quality     MediaQuality
+  url         String
+
+  width       Int?
+  height      Int?
+  bitrate     Int?
+  duration    Float?
+
+  createdAt   DateTime     @default(now())
+
+  mediaItem   MediaItem    @relation(fields: [mediaItemId], references: [id])
+}
+
+model Award {
+  id          String          @id @default(uuid())
+
+  awardedById String
+  targetType  AwardTargetType
+  targetId    String
+
+  name        String          // e.g. "Gold", "EditorPick"
+
+  createdAt   DateTime        @default(now())
+
+  awardedBy   User            @relation("awardedBy", fields: [awardedById], references: [id])
+
+  posts Post[]
+  comments Comment[]
+}

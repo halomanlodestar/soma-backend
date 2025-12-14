@@ -8,6 +8,8 @@ import { VotesModule } from './modules/votes/votes.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaService } from './prisma/prisma.service';
 import { ConfigModule } from './config/config.module';
+import { MediaModule } from './modules/media/media.module';
+import { AwardsModule } from './modules/awards/awards.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { ConfigModule } from './config/config.module';
     VotesModule,
     NotificationsModule,
     ConfigModule,
+    MediaModule,
+    AwardsModule,
   ],
   providers: [PrismaService],
 })
