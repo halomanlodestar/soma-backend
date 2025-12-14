@@ -201,6 +201,7 @@ model Notification {
   targetType String?   // e.g. "POST", "COMMENT"
   targetId   String?
 
+
   readAt     DateTime?
   createdAt  DateTime  @default(now())
 
