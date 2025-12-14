@@ -1,26 +1,53 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateSomaDto } from './dto/create-soma.dto';
-import { UpdateSomaDto } from './dto/update-soma.dto';
+import { PrismaService } from '../../prisma/prisma.service';
+import { Soma } from './entities/soma.entity';
 
 @Injectable()
 export class SomaService {
-  create(createSomaDto: CreateSomaDto) {
-    return 'This action adds a new soma';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(createSomaDto: CreateSomaDto): Promise<Soma> {
+    const { name, slug, description } = createSomaDto;
+
+    const existing = await this.prisma.soma.findUnique({
+      where: { slug },
+    });
+
+    if (existing) {
+      throw new ConflictException(`Soma with slug '${slug}' already exists`);
+    }
+
+    return this.prisma.soma.create({
+      data: {
+        name,
+        slug: slug.toLowerCase(),
+        description,
+      },
+    });
   }
 
-  findAll() {
-    return `This action returns all soma`;
+  async findAll(): Promise<Soma[]> {
+    return this.prisma.soma.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} soma`;
-  }
+  async findBySlug(slug: string): Promise<Soma> {
+    const soma = await this.prisma.soma.findUnique({
+      where: { slug: slug.toLowerCase() },
+    });
 
-  update(id: number, updateSomaDto: UpdateSomaDto) {
-    return `This action updates a #${id} soma`;
-  }
+    if (!soma) {
+      throw new NotFoundException(`Soma with slug '${slug}' not found`);
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} soma`;
+    return soma;
   }
 }

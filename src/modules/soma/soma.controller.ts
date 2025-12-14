@@ -1,34 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { SomaService } from './soma.service';
 import { CreateSomaDto } from './dto/create-soma.dto';
-import { UpdateSomaDto } from './dto/update-soma.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Soma } from './entities/soma.entity';
 
-@Controller('soma')
+@Controller('somas')
 export class SomaController {
   constructor(private readonly somaService: SomaService) {}
 
   @Post()
-  create(@Body() createSomaDto: CreateSomaDto) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  create(@Body() createSomaDto: CreateSomaDto): Promise<Soma> {
     return this.somaService.create(createSomaDto);
   }
 
   @Get()
-  findAll() {
+  findAll(): Promise<Soma[]> {
     return this.somaService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.somaService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSomaDto: UpdateSomaDto) {
-    return this.somaService.update(+id, updateSomaDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.somaService.remove(+id);
+  @Get(':slug')
+  findBySlug(@Param('slug') slug: string): Promise<Soma> {
+    return this.somaService.findBySlug(slug);
   }
 }
