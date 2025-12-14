@@ -1,4 +1,1 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateNotificationDto } from './create-notification.dto';
-
-export class UpdateNotificationDto extends PartialType(CreateNotificationDto) {}
+// Unused as we have specific endpoint for marking as read

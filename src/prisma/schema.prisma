@@ -58,6 +58,7 @@ model User {
   comments    Comment[]
   votes       Vote[]
   awardsGiven Award[]  @relation("awardedBy")
+  notifications Notification[]
 }
 
 model Soma {
@@ -188,4 +189,20 @@ model Award {
 
   posts Post[]
   comments Comment[]
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  
+  type       String    // e.g. "COMMENT", "AWARD"
+  message    String
+
+  targetType String?   // e.g. "POST", "COMMENT"
+  targetId   String?
+
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  user       User      @relation(fields: [userId], references: [id])
 }

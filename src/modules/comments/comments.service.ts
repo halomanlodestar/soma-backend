@@ -8,10 +8,14 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Comment } from './entities/comment.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(
     userId: string,
@@ -26,13 +30,26 @@ export class CommentsService {
       throw new BadRequestException(`Post with id '${postId}' does not exist`);
     }
 
-    return this.prisma.comment.create({
+    const comment = await this.prisma.comment.create({
       data: {
         content: createCommentDto.content,
         authorId: userId,
         postId,
       },
     });
+
+    // Notify post author if commenter is not the author
+    if (post.authorId !== userId) {
+      await this.notificationsService.create({
+        userId: post.authorId,
+        type: 'COMMENT',
+        message: `Someone commented on your post: "${post.title}"`,
+        targetType: 'POST',
+        targetId: postId,
+      });
+    }
+
+    return comment;
   }
 
   async reply(

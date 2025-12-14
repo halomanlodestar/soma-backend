@@ -3,17 +3,24 @@ import { CreateAwardDto } from './dto/create-award.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AwardTargetType } from '../../prisma/generated/client';
 import { Award } from './entities/award.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AwardsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(userId: string, createAwardDto: CreateAwardDto): Promise<Award> {
     const { targetType, targetId, name } = createAwardDto;
 
-    await this.validateTarget(targetType, targetId);
+    const recipientId = await this.validateTargetAndGetAuthor(
+      targetType,
+      targetId,
+    );
 
-    return this.prisma.award.create({
+    const award = await this.prisma.award.create({
       data: {
         awardedById: userId,
         targetType,
@@ -21,6 +28,49 @@ export class AwardsService {
         name,
       },
     });
+
+    // Notify recipient
+    if (recipientId !== userId) {
+      await this.notificationsService.create({
+        userId: recipientId,
+        type: 'AWARD',
+        message: `You received a "${name}" award!`,
+        targetType: targetType.toString(), // Convert enum to string
+        targetId: targetId,
+      });
+    }
+
+    return award;
+  }
+
+  // Renamed from validateTarget to better reflect purpose
+  private async validateTargetAndGetAuthor(
+    targetType: AwardTargetType,
+    targetId: string,
+  ): Promise<string> {
+    if (targetType === AwardTargetType.POST) {
+      const post = await this.prisma.post.findUnique({
+        where: { id: targetId },
+        select: { authorId: true },
+      });
+      if (!post) {
+        throw new BadRequestException(`Post with id '${targetId}' not found`);
+      }
+      return post.authorId;
+    } else if (targetType === AwardTargetType.COMMENT) {
+      const comment = await this.prisma.comment.findUnique({
+        where: { id: targetId },
+        select: { authorId: true },
+      });
+      if (!comment) {
+        throw new BadRequestException(
+          `Comment with id '${targetId}' not found`,
+        );
+      }
+      return comment.authorId;
+    } else {
+      throw new BadRequestException(`Invalid target type '${targetType}'`);
+    }
   }
 
   async findAllByPost(postId: string): Promise<Award[]> {
