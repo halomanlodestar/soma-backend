@@ -14,4 +14,8 @@ export const configSchema = z.object({
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_CALLBACK_URL: z.string(),
+  S3_BUCKET: z.string(),
+  S3_REGION: z.string(),
+  S3_ACCESS_KEY_ID: z.string(),
+  S3_SECRET_ACCESS_KEY: z.string(),
 });

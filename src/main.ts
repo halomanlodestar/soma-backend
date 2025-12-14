@@ -39,6 +39,7 @@ async function bootstrap() {
     )
     .addTag('Somas', 'Community management endpoints')
     .addTag('Posts', 'Post management endpoints')
+    .addTag('Media', 'Media upload and management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
