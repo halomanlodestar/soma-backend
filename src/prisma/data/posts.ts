@@ -17,4 +17,25 @@ export const posts = [
     authorUsername: 'admin',
     somaSlug: 'tech-talk',
   },
+  {
+    title: 'My Latest Painting',
+    body: 'Check out this landscape I painted last weekend.',
+    authorUsername: 'creator',
+    somaSlug: 'art-gallery',
+    image: 'image1.png',
+  },
+  {
+    title: 'My Latest Painting',
+    body: 'Check out this landscape I painted last weekend.',
+    authorUsername: 'creator',
+    somaSlug: 'art-gallery',
+    image: 'image2.png',
+  },
+  {
+    title: 'My Latest Painting',
+    body: 'Check out this landscape I painted last weekend.',
+    authorUsername: 'creator',
+    somaSlug: 'art-gallery',
+    image: 'image3.png',
+  },
 ];

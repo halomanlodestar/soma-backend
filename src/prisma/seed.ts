@@ -3,6 +3,9 @@ import { PrismaClient, VoteTargetType } from './generated/client';
 import { users } from './data/users';
 import { somas } from './data/somas';
 import { posts } from './data/posts';
+import * as fs from 'fs';
+import * as path from 'path';
+import { MediaType, MediaQuality } from './generated/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -59,6 +62,42 @@ async function main() {
         },
       });
       console.log(`Created post with id: ${post.id}`);
+
+      // Handle Media
+      if ((p as any).image) {
+        const imageFile = (p as any).image;
+        const imagePath = path.join(__dirname, 'data', 'images', imageFile);
+
+        try {
+          const imageBuffer = await fs.promises.readFile(imagePath);
+          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+
+          const collection = await prisma.mediaCollection.create({
+            data: {
+              postId: post.id,
+            },
+          });
+
+          const mediaItem = await prisma.mediaItem.create({
+            data: {
+              collectionId: collection.id,
+              type: MediaType.IMAGE,
+              originalUrl: base64Image,
+            },
+          });
+
+          await prisma.mediaVariant.create({
+            data: {
+              mediaItemId: mediaItem.id,
+              quality: MediaQuality.ORIGINAL,
+              url: base64Image,
+            },
+          });
+          console.log(`Created media for post ${post.id}`);
+        } catch (error) {
+          console.error(`Failed to seed image ${imageFile}:`, error);
+        }
+      }
 
       // Add some votes
       const viewer = await prisma.user.findUnique({
