@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { UserRole } from '../../prisma/generated/client';
+import { Prisma, UserRole } from '../../prisma/generated/client';
 
 @Injectable()
 export class FollowService {
@@ -36,7 +36,10 @@ export class FollowService {
       });
       return { success: true };
     } catch (error) {
-      if (error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         // Already following, return success as per requirements
         return { success: true, message: 'Already following' };
       }
@@ -57,8 +60,11 @@ export class FollowService {
         },
       });
       return { success: true };
-    } catch (error) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         // Record not found, consider it success (idempotent)
         return { success: true, message: 'Not following' };
       }

@@ -4,6 +4,7 @@ import { DeleteVoteDto } from './dto/delete-vote.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VoteTargetType } from '../../prisma/generated/client';
 import { Vote } from './entities/vote.entity';
+import { Prisma } from 'src/prisma/generated/client';
 
 @Injectable()
 export class VotesService {
@@ -49,11 +50,15 @@ export class VotesService {
           },
         },
       });
-    } catch (e) {
+    } catch (error: unknown) {
       // If vote doesn't exist, we can treat it as success or ignore for idempotency
       // P2025 is "Record to delete does not exist."
-      if (e.code !== 'P2025') {
-        throw e;
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw error;
       }
     }
   }
@@ -62,24 +67,33 @@ export class VotesService {
     targetType: VoteTargetType,
     targetId: string,
   ): Promise<void> {
-    if (targetType === VoteTargetType.POST) {
-      const post = await this.prisma.post.findUnique({
-        where: { id: targetId },
-      });
-      if (!post) {
-        throw new BadRequestException(`Post with id '${targetId}' not found`);
+    switch (targetType) {
+      case VoteTargetType.POST: {
+        const post = await this.prisma.post.findUnique({
+          where: { id: targetId },
+        });
+
+        if (!post) {
+          throw new BadRequestException(`Post with id '${targetId}' not found`);
+        }
+
+        break;
       }
-    } else if (targetType === VoteTargetType.COMMENT) {
-      const comment = await this.prisma.comment.findUnique({
-        where: { id: targetId },
-      });
-      if (!comment) {
+      case VoteTargetType.COMMENT: {
+        const comment = await this.prisma.comment.findUnique({
+          where: { id: targetId },
+        });
+        if (!comment) {
+          throw new BadRequestException(
+            `Comment with id '${targetId}' not found`,
+          );
+        }
+        break;
+      }
+      default:
         throw new BadRequestException(
-          `Comment with id '${targetId}' not found`,
+          `Invalid target type '${targetType as string}'`,
         );
-      }
-    } else {
-      throw new BadRequestException(`Invalid target type '${targetType}'`);
     }
   }
 }

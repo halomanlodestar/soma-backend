@@ -69,7 +69,9 @@ export class AwardsService {
       }
       return comment.authorId;
     } else {
-      throw new BadRequestException(`Invalid target type '${targetType}'`);
+      throw new BadRequestException(
+        `Invalid target type '${targetType as string}'`,
+      );
     }
   }
 
@@ -118,7 +120,9 @@ export class AwardsService {
         );
       }
     } else {
-      throw new BadRequestException(`Invalid target type '${targetType}'`);
+      throw new BadRequestException(
+        `Invalid target type '${targetType as string}'`,
+      );
     }
   }
 }
