@@ -1,5 +1,14 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { CreateMediaItemDto } from './create-media-item.dto';
 
 export class CreatePostDto {
   @ApiProperty({
@@ -26,4 +35,15 @@ export class CreatePostDto {
   @IsUUID()
   @IsNotEmpty()
   somaId: string;
+
+  @ApiProperty({
+    description: 'Media items to attach — each key comes from upload-intent',
+    type: [CreateMediaItemDto],
+    required: false,
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateMediaItemDto)
+  @IsOptional()
+  media?: CreateMediaItemDto[];
 }

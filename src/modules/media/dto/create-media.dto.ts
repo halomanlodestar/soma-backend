@@ -41,4 +41,11 @@ export class UploadIntentResponseDto {
     example: 'https://bucket.s3.region.amazonaws.com/soma/user-id/...',
   })
   finalPublicUrl: string;
+
+  @ApiProperty({
+    description:
+      'S3 object key — pass this back when creating a post with media',
+    example: 'soma/user-id/1744444800000-f3a9c1b2e4d50f87.jpg',
+  })
+  key: string;
 }

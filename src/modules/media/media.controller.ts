@@ -56,6 +56,7 @@ export class MediaController {
     return {
       presignedUploadUrl: result.presignedUploadUrl,
       finalPublicUrl: result.finalPublicUrl,
+      key: result.key,
     };
   }
 
