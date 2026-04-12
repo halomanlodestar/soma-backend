@@ -156,6 +156,6 @@ export class PostsController {
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
   ): Promise<void> {
-    await this.postsService.remove(user.id, user.role, id);
+    await this.postsService.delete(user.id, user.role, id);
   }
 }

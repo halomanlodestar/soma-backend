@@ -142,9 +142,7 @@ export class PostsService {
     const post = await this.findOne(postId);
 
     if (post.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException(
-        'You can only update your own posts unless you are an admin',
-      );
+      throw new ForbiddenException('You are not allowed to update this post.');
     }
 
     return this.prisma.post.update({
@@ -153,7 +151,7 @@ export class PostsService {
     });
   }
 
-  async remove(
+  async delete(
     userId: string,
     userRole: string,
     postId: string,
@@ -161,9 +159,7 @@ export class PostsService {
     const post = await this.findOne(postId);
 
     if (post.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException(
-        'You can only delete your own posts unless you are an admin',
-      );
+      throw new ForbiddenException('You are not allowed to delete this post.');
     }
 
     await this.prisma.post.update({
