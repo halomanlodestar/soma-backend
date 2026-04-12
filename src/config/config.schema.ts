@@ -19,4 +19,10 @@ export const configSchema = z.object({
   S3_ACCESS_KEY_ID: z.string(),
   S3_SECRET_ACCESS_KEY: z.string(),
   FRONTEND_URL: z.string().default('http://localhost:8000'),
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z
+    .string()
+    .optional()
+    .default('6379')
+    .transform((val) => parseInt(val, 10)),
 });

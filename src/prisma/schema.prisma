@@ -40,6 +40,12 @@ enum AwardTargetType {
   COMMENT
 }
 
+enum PostVisibility {
+  PUBLIC
+  SUBSCRIBER_ONLY
+  WAITING
+}
+
 // MODELS
 
 model User {
@@ -89,16 +95,17 @@ model Soma {
 }
 
 model Post {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   title       String
   body        String?
 
   authorId    String
   somaId      String
-  impressions Int      @default(0)
+  impressions Int             @default(0)
+  visibility  PostVisibility  @default(WAITING)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   author      User     @relation(fields: [authorId], references: [id])
   soma        Soma     @relation(fields: [somaId], references: [id])
@@ -164,6 +171,7 @@ model MediaItem {
 
   type         MediaType
   originalUrl  String
+  s3Key        String
   metadata     Json?
 
   createdAt    DateTime        @default(now())
