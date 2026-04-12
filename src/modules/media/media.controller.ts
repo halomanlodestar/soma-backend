@@ -12,7 +12,6 @@ import {
   UploadIntentDto,
   UploadIntentResponseDto,
 } from './dto/create-media.dto';
-import { AttachMediaDto } from './dto/update-media.dto';
 import { MediaCollection } from './entities/media.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -58,36 +57,6 @@ export class MediaController {
       finalPublicUrl: result.finalPublicUrl,
       key: result.key,
     };
-  }
-
-  @Post('posts/:postId/media')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Attach media to a post' })
-  @ApiParam({ name: 'postId', description: 'Post UUID', type: String })
-  @ApiResponse({
-    status: 201,
-    description: 'Media attached successfully',
-    type: MediaCollection,
-  })
-  @ApiResponse({ status: 400, description: 'Invalid input' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Not post author or admin',
-  })
-  @ApiResponse({ status: 404, description: 'Post not found' })
-  async attachMedia(
-    @CurrentUser() user: Express.User,
-    @Param('postId') postId: string,
-    @Body() attachMediaDto: AttachMediaDto,
-  ): Promise<MediaCollection> {
-    return this.mediaService.attachMediaToPost(
-      user.id,
-      user.role,
-      postId,
-      attachMediaDto,
-    );
   }
 
   @Get('posts/:postId/media')
