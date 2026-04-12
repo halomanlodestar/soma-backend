@@ -145,7 +145,6 @@ export class PostsController {
   @ApiResponse({
     status: 200,
     description: 'Post deleted successfully',
-    type: PostEntity,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
@@ -153,10 +152,10 @@ export class PostsController {
     description: 'Forbidden - Not post author or admin',
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
-  remove(
+  async remove(
     @CurrentUser() user: Express.User,
     @Param('id') id: string,
-  ): Promise<PostEntity> {
-    return this.postsService.remove(user.id, user.role, id);
+  ): Promise<void> {
+    await this.postsService.remove(user.id, user.role, id);
   }
 }

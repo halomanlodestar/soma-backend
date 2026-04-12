@@ -80,6 +80,7 @@ async function main() {
 
           const mediaItem = await prisma.mediaItem.create({
             data: {
+              s3Key: `seed/${imageFile}`,
               collectionId: collection.id,
               type: MediaType.IMAGE,
               originalUrl: base64Image,

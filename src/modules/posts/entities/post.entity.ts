@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+// import { PostVisibility } from '../../../prisma/generated/client';
 
 export class Post {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
@@ -24,6 +25,13 @@ export class Post {
     description: 'Number of times the post has been viewed',
   })
   impressions: number;
+
+  // @ApiProperty({
+  //   enum: PostVisibility,
+  //   example: PostVisibility.PUBLIC,
+  //   description: 'Visibility state of the post',
+  // })
+  // visibility: PostVisibility;
 
   @ApiProperty()
   createdAt: Date;

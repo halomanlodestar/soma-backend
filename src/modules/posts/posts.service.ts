@@ -8,9 +8,11 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
+import { Prisma } from '../../prisma/generated/client';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { CreatePostJob } from './jobs/create.job';
+import { DeletePostJob } from './jobs/delete.job';
 
 @Injectable()
 export class PostsService {
@@ -18,6 +20,8 @@ export class PostsService {
     private readonly prisma: PrismaService,
     @InjectQueue('post-processing')
     private readonly postProcessingQueue: Queue<CreatePostJob>,
+    @InjectQueue('post-deletion')
+    private readonly postDeletionQueue: Queue<DeletePostJob>,
   ) {}
 
   async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
@@ -55,7 +59,10 @@ export class PostsService {
 
   async findBySoma(somaId: string): Promise<Post[]> {
     return this.prisma.post.findMany({
-      where: { somaId },
+      where: {
+        somaId,
+        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -65,25 +72,32 @@ export class PostsService {
   async findTopPosts(page = 1, limit = 20): Promise<Post[]> {
     const skip = (page - 1) * limit;
 
-    const posts = await this.prisma.post.findMany({
+    const includeVoteValue = {
+      votes: { select: { value: true } },
+    } satisfies Prisma.PostInclude;
+
+    type PostWithVotes = Prisma.PostGetPayload<{
+      include: typeof includeVoteValue;
+    }>;
+
+    const posts: PostWithVotes[] = await this.prisma.post.findMany({
       take: limit,
       skip,
-      include: {
-        votes: {
-          select: {
-            value: true,
-          },
-        },
+      where: {
+        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
       },
+      include: includeVoteValue,
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    const postsWithScores = posts.map((post) => {
-      const score = post.votes.reduce((sum, vote) => sum + vote.value, 0);
-      const { ...postData } = post;
-      return { ...postData, score };
+    const postsWithScores = posts.map((post: PostWithVotes) => {
+      const score = post.votes.reduce(
+        (sum: number, vote: { value: number }) => sum + vote.value,
+        0,
+      );
+      return { ...post, score };
     });
 
     postsWithScores.sort((a, b) => {
@@ -93,12 +107,23 @@ export class PostsService {
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
 
-    return postsWithScores.map(({ ...post }) => post);
+    return postsWithScores.map(
+      (post): Post => ({
+        id: post.id,
+        title: post.title,
+        body: post.body,
+        authorId: post.authorId,
+        somaId: post.somaId,
+        impressions: post.impressions,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+      }),
+    );
   }
 
   async findOne(id: string): Promise<Post> {
-    const post = await this.prisma.post.findUnique({
-      where: { id },
+    const post = await this.prisma.post.findFirst({
+      where: { id, visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] } },
     });
 
     if (!post) {
@@ -132,7 +157,7 @@ export class PostsService {
     userId: string,
     userRole: string,
     postId: string,
-  ): Promise<Post> {
+  ): Promise<void> {
     const post = await this.findOne(postId);
 
     if (post.authorId !== userId && userRole !== 'ADMIN') {
@@ -141,8 +166,13 @@ export class PostsService {
       );
     }
 
-    return this.prisma.post.delete({
+    await this.prisma.post.update({
       where: { id: postId },
+      data: { visibility: 'DELETING' },
     });
+
+    await this.postDeletionQueue.add('delete-post', {
+      postId,
+    } satisfies DeletePostJob);
   }
 }

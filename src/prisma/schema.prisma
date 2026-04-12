@@ -44,6 +44,7 @@ enum PostVisibility {
   PUBLIC
   SUBSCRIBER_ONLY
   WAITING
+  DELETING
 }
 
 // MODELS
