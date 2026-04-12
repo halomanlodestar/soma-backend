@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand,
+  NotFound,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomBytes } from 'crypto';
 
@@ -63,5 +69,29 @@ export class StorageService {
   private getExtensionFromFileName(fileName: string): string {
     const lastDot = fileName.lastIndexOf('.');
     return lastDot !== -1 ? fileName.substring(lastDot) : '';
+  }
+
+  async verifyKeyExists(key: string): Promise<boolean> {
+    try {
+      await this.s3Client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return true;
+    } catch (err) {
+      if (err instanceof NotFound) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    await this.s3Client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+
+  buildPublicUrl(key: string): string {
+    return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
   }
 }

@@ -8,13 +8,20 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+import { CreatePostJob } from './jobs/create.job';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('post-processing')
+    private readonly postProcessingQueue: Queue<CreatePostJob>,
+  ) {}
 
   async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
-    const { title, body, somaId } = createPostDto;
+    const { title, body, somaId, media } = createPostDto;
 
     const soma = await this.prisma.soma.findUnique({
       where: { id: somaId },
@@ -24,14 +31,26 @@ export class PostsService {
       throw new BadRequestException(`Soma with id '${somaId}' does not exist`);
     }
 
-    return this.prisma.post.create({
+    const hasMedia = media && media.length > 0;
+
+    const post = await this.prisma.post.create({
       data: {
         title,
         body,
         authorId: userId,
         somaId,
+        visibility: hasMedia ? 'WAITING' : 'PUBLIC',
       },
     });
+
+    if (hasMedia) {
+      await this.postProcessingQueue.add('process-post-media', {
+        postId: post.id,
+        media,
+      } satisfies CreatePostJob);
+    }
+
+    return post;
   }
 
   async findBySoma(somaId: string): Promise<Post[]> {
