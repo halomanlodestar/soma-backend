@@ -25,7 +25,6 @@ async function bootstrap() {
       'The Soma (Reddit-like community platform) API documentation',
     )
     .setVersion('1.0')
-    .addServer('/api/v1', 'API v1')
     .addBearerAuth(
       {
         type: 'http',
