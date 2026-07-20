@@ -19,30 +19,32 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('Soma API')
-    .setDescription(
-      'The Soma (Reddit-like community platform) API documentation',
-    )
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Enter JWT token',
-      },
-      'JWT-auth',
-    )
-    .addTag('Somas', 'Community management endpoints')
-    .addTag('Posts', 'Post management endpoints')
-    .addTag('Media', 'Media upload and management endpoints')
-    .build();
+  if (process.env.NODE_ENV === 'development') {
+    const config = new DocumentBuilder()
+      .setTitle('Soma API')
+      .setDescription(
+        'The Soma (Reddit-like community platform) API documentation',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Enter JWT token',
+        },
+        'JWT-auth',
+      )
+      .addTag('Somas', 'Community management endpoints')
+      .addTag('Posts', 'Post management endpoints')
+      .addTag('Media', 'Media upload and management endpoints')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/docs', app, document, {
-    jsonDocumentUrl: 'api/v1/openapi.json',
-  });
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/v1/docs', app, document, {
+      jsonDocumentUrl: 'api/v1/openapi.json',
+    });
+  }
 
   await app.listen(process.env.PORT ?? 8000);
 }

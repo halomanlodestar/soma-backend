@@ -8,7 +8,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
-import { Prisma } from '../../prisma/generated/client';
+import { VoteTargetType } from '../../prisma/generated/client';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { CreatePostJob } from './jobs/create.job';
@@ -72,31 +72,35 @@ export class PostsService {
   async findTopPosts(page = 1, limit = 20): Promise<Post[]> {
     const skip = (page - 1) * limit;
 
-    const includeVoteValue = {
-      votes: { select: { value: true } },
-    } satisfies Prisma.PostInclude;
-
-    type PostWithVotes = Prisma.PostGetPayload<{
-      include: typeof includeVoteValue;
-    }>;
-
-    const posts: PostWithVotes[] = await this.prisma.post.findMany({
+    const posts = await this.prisma.post.findMany({
       take: limit,
       skip,
       where: {
         visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
       },
-      include: includeVoteValue,
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    const postsWithScores = posts.map((post: PostWithVotes) => {
-      const score = post.votes.reduce(
-        (sum: number, vote: { value: number }) => sum + vote.value,
-        0,
-      );
+    const voteAggregates = await this.prisma.vote.groupBy({
+      by: ['targetId'],
+      where: {
+        targetType: VoteTargetType.POST,
+        targetId: { in: posts.map((post) => post.id) },
+      },
+      _sum: { value: true },
+    });
+
+    const scores = new Map(
+      voteAggregates.map((aggregate) => [
+        aggregate.targetId,
+        aggregate._sum.value ?? 0,
+      ]),
+    );
+
+    const postsWithScores = posts.map((post) => {
+      const score = scores.get(post.id) ?? 0;
       return { ...post, score };
     });
 

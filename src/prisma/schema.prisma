@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "./generated"
+  provider     = "prisma-client"
+  output       = "./generated"
   moduleFormat = "cjs"
 }
 
@@ -50,184 +50,192 @@ enum PostVisibility {
 // MODELS
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  username    String   @unique
-  displayName String?
+  id          String  @id @default(uuid())
+  email       String  @unique
+  username    String  @unique
+  displayName String? @map("display_name")
   bio         String?
 
-  role        UserRole @default(VIEWER)
+  role UserRole @default(VIEWER)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  posts       Post[]
-  comments    Comment[]
-  votes       Vote[]
-  awardsGiven Award[]  @relation("awardedBy")
+  posts         Post[]
+  comments      Comment[]
+  votes         Vote[]
+  awardsGiven   Award[]        @relation("awardedBy")
   notifications Notification[]
 
   followers Follow[] @relation("UserFollowers")
   following Follow[] @relation("UserFollowing")
+
+  @@map("users")
 }
 
 model Follow {
   id          String   @id @default(uuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  follower    User     @relation("UserFollowing", fields: [followerId], references: [id])
-  following   User     @relation("UserFollowers", fields: [followingId], references: [id])
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id])
+  following User @relation("UserFollowers", fields: [followingId], references: [id])
 
-  @@unique([followerId, followingId])
+  @@unique([followerId, followingId], map: "follows_follower_id_following_id_key")
+  @@map("follows")
 }
 
 model Soma {
-  id          String   @id @default(uuid())
-  slug        String   @unique
+  id          String  @id @default(uuid())
+  slug        String  @unique
   name        String
   description String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  posts       Post[]
+  posts Post[]
+
+  @@map("somas")
 }
 
 model Post {
-  id          String          @id @default(uuid())
-  title       String
-  body        String?
+  id    String  @id @default(uuid())
+  title String
+  body  String?
 
-  authorId    String
-  somaId      String
-  impressions Int             @default(0)
-  visibility  PostVisibility  @default(WAITING)
+  authorId    String         @map("author_id")
+  somaId      String         @map("soma_id")
+  impressions Int            @default(0)
+  visibility  PostVisibility @default(WAITING)
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  author      User     @relation(fields: [authorId], references: [id])
-  soma        Soma     @relation(fields: [somaId], references: [id])
+  author User @relation(fields: [authorId], references: [id])
+  soma   Soma @relation(fields: [somaId], references: [id])
 
-  comments    Comment[]
-  media       MediaCollection?
-  votes       Vote[]
-  awards      Award[]
+  comments Comment[]
+  media    MediaCollection?
+
+  @@map("posts")
 }
 
 model Comment {
-  id              String   @id @default(uuid())
-  content         String
+  id      String @id @default(uuid())
+  content String
 
-  authorId        String
-  postId          String
-  parentCommentId String?
+  authorId        String  @map("author_id")
+  postId          String  @map("post_id")
+  parentCommentId String? @map("parent_comment_id")
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  author          User     @relation(fields: [authorId], references: [id])
-  post            Post     @relation(fields: [postId], references: [id])
-  parent          Comment? @relation("CommentToComment", fields: [parentCommentId], references: [id])
-  children        Comment[] @relation("CommentToComment")
+  author   User      @relation(fields: [authorId], references: [id])
+  post     Post      @relation(fields: [postId], references: [id])
+  parent   Comment?  @relation("CommentToComment", fields: [parentCommentId], references: [id])
+  children Comment[] @relation("CommentToComment")
 
-  votes           Vote[]
-  awards          Award[]
+  @@map("comments")
 }
 
 model Vote {
-  id         String         @id @default(uuid())
-  userId     String
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
-  targetType VoteTargetType
-  targetId   String
+  targetType VoteTargetType @map("target_type")
+  targetId   String         @map("target_id")
 
-  value      Int            // +1 or -1
+  value Int // +1 or -1
 
-  createdAt  DateTime       @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  user       User           @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
-  posts Post[]
-  comments Comment[]
-
-  @@unique([userId, targetType, targetId])
+  @@unique([userId, targetType, targetId], map: "votes_user_id_target_type_target_id_key")
+  @@map("votes")
 }
 
 model MediaCollection {
-  id        String      @id @default(uuid())
-  postId    String      @unique
+  id     String @id @default(uuid())
+  postId String @unique(map: "media_collections_post_id_key") @map("post_id")
 
-  createdAt DateTime    @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  post      Post        @relation(fields: [postId], references: [id])
-  items     MediaItem[]
+  post  Post        @relation(fields: [postId], references: [id])
+  items MediaItem[]
+
+  @@map("media_collections")
 }
 
 model MediaItem {
-  id           String          @id @default(uuid())
-  collectionId String
+  id           String @id @default(uuid())
+  collectionId String @map("collection_id")
 
-  type         MediaType
-  originalUrl  String
-  s3Key        String
-  metadata     Json?
+  type        MediaType
+  originalUrl String    @map("original_url")
+  s3Key       String    @map("s3_key")
+  metadata    Json?
 
-  createdAt    DateTime        @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  collection   MediaCollection @relation(fields: [collectionId], references: [id])
-  variants     MediaVariant[]
+  collection MediaCollection @relation(fields: [collectionId], references: [id])
+  variants   MediaVariant[]
+
+  @@map("media_items")
 }
 
 model MediaVariant {
-  id          String       @id @default(uuid())
-  mediaItemId String
+  id          String @id @default(uuid())
+  mediaItemId String @map("media_item_id")
 
-  quality     MediaQuality
-  url         String
+  quality MediaQuality
+  url     String
 
-  width       Int?
-  height      Int?
-  bitrate     Int?
-  duration    Float?
+  width    Int?
+  height   Int?
+  bitrate  Int?
+  duration Float?
 
-  createdAt   DateTime     @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  mediaItem   MediaItem    @relation(fields: [mediaItemId], references: [id])
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id])
+
+  @@map("media_variants")
 }
 
 model Award {
-  id          String          @id @default(uuid())
+  id String @id @default(uuid())
 
-  awardedById String
-  targetType  AwardTargetType
-  targetId    String
+  awardedById String          @map("awarded_by_id")
+  targetType  AwardTargetType @map("target_type")
+  targetId    String          @map("target_id")
 
-  name        String          // e.g. "Gold", "EditorPick"
+  name String // e.g. "Gold", "EditorPick"
 
-  createdAt   DateTime        @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
-  awardedBy   User            @relation("awardedBy", fields: [awardedById], references: [id])
+  awardedBy User @relation("awardedBy", fields: [awardedById], references: [id])
 
-  posts Post[]
-  comments Comment[]
+  @@map("awards")
 }
 
 model Notification {
-  id         String    @id @default(uuid())
-  userId     String
-  
-  type       String    // e.g. "COMMENT", "AWARD"
-  message    String
+  id     String @id @default(uuid())
+  userId String @map("user_id")
 
-  targetType String?   // e.g. "POST", "COMMENT"
-  targetId   String?
+  type    String // e.g. "COMMENT", "AWARD"
+  message String
 
+  targetType String? @map("target_type") // e.g. "POST", "COMMENT"
+  targetId   String? @map("target_id")
 
-  readAt     DateTime?
-  createdAt  DateTime  @default(now())
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
-  user       User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
 }
