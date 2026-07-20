@@ -6,6 +6,7 @@ declare global {
       id: string;
       email: string;
       username: string;
+      displayName: string | null;
       role: UserRole;
     }
   }
