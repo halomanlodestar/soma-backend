@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: '*',
+      origin: 'http://localhost:3000',
     },
   });
 
@@ -31,9 +31,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
         description: 'Enter JWT token',
-        in: 'header',
       },
       'JWT-auth',
     )

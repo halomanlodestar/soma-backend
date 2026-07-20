@@ -38,7 +38,6 @@ export class CommentsService {
       },
     });
 
-    // Notify post author if commenter is not the author
     if (post.authorId !== userId) {
       await this.notificationsService.create({
         userId: post.authorId,

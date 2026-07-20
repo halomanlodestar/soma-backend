@@ -21,12 +21,10 @@ export class AuthService {
   async validateGoogleUser(googleUser: GoogleUserData) {
     const { email, displayName } = googleUser;
 
-    // Find existing user by email
     let user = await this.prisma.user.findUnique({
       where: { email },
     });
 
-    // Create new user if doesn't exist
     if (!user) {
       const username = await this.generateUniqueUsername(email, displayName);
 
@@ -35,7 +33,7 @@ export class AuthService {
           email,
           username,
           displayName,
-          role: 'VIEWER', // Default role
+          role: 'VIEWER',
         },
       });
     }
@@ -69,13 +67,11 @@ export class AuthService {
     email: string,
     displayName: string,
   ): Promise<string> {
-    // Try username from email first
     const baseUsername = email
       .split('@')[0]
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
 
-    // Check if base username is available
     const existingUser = await this.prisma.user.findUnique({
       where: { username: baseUsername },
     });
@@ -84,7 +80,6 @@ export class AuthService {
       return baseUsername;
     }
 
-    // If not available, try with display name
     if (displayName) {
       const nameUsername = displayName.toLowerCase().replace(/[^a-z0-9]/g, '');
       const existingNameUser = await this.prisma.user.findUnique({
@@ -96,7 +91,6 @@ export class AuthService {
       }
     }
 
-    // If still not available, append random numbers
     let attempts = 0;
     while (attempts < 10) {
       const randomSuffix = Math.floor(Math.random() * 10000);
@@ -113,7 +107,6 @@ export class AuthService {
       attempts++;
     }
 
-    // Fallback to timestamp-based username
     return `${baseUsername}${Date.now()}`;
   }
 }

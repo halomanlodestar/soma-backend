@@ -49,8 +49,6 @@ export class FollowService {
 
   async unfollow(followerId: string, followingId: string) {
     try {
-      // We need to delete by the unique compound key or find first then delete
-      // Prisma supports delete with where unique compound
       await this.prisma.follow.delete({
         where: {
           followerId_followingId: {
@@ -65,7 +63,6 @@ export class FollowService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
-        // Record not found, consider it success (idempotent)
         return { success: true, message: 'Not following' };
       }
       throw error;
