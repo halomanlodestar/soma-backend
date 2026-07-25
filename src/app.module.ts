@@ -27,7 +27,10 @@ import { FollowModule } from './modules/follow/follow.module';
       playground: true,
       includeStacktraceInErrorResponses: false,
       formatError: (error) => {
-        const originalError = error.extensions?.originalError as any;
+        const originalError = error.extensions?.originalError as
+          | Record<string, unknown>
+          | undefined;
+
         if (!originalError) {
           return {
             message: error.message,
@@ -35,9 +38,9 @@ import { FollowModule } from './modules/follow/follow.module';
           };
         }
         return {
-          message: originalError.message || error.message,
-          code: originalError.error || error.extensions?.code,
-          statusCode: originalError.statusCode,
+          message: (originalError.message as string) || error.message,
+          code: (originalError.error as string) || error.extensions?.code,
+          statusCode: originalError.statusCode as number | undefined,
         };
       },
     }),
