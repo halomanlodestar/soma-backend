@@ -1,38 +1,35 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 import { MediaType } from '../../../prisma/generated/client';
 
+@ObjectType()
 export class MediaItem {
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174001' })
+  @Field(() => String)
   collectionId: string;
 
-  @ApiProperty({ enum: ['IMAGE', 'VIDEO', 'AUDIO'], example: 'IMAGE' })
+  @Field(() => String)
   type: MediaType;
 
-  @ApiProperty({
-    example: 'https://bucket.s3.region.amazonaws.com/soma/user-id/...',
-  })
+  @Field(() => String)
   originalUrl: string;
 
-  @ApiProperty({ nullable: true, example: { width: 1920, height: 1080 } })
-  metadata: Record<string, any> | null;
-
-  @ApiProperty()
+  @Field(() => Date)
   createdAt: Date;
 }
 
+@ObjectType()
 export class MediaCollection {
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174002' })
+  @Field(() => String)
   postId: string;
 
-  @ApiProperty()
+  @Field(() => Date)
   createdAt: Date;
 
-  @ApiProperty({ type: [MediaItem] })
+  @Field(() => [MediaItem])
   items: MediaItem[];
 }

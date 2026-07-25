@@ -1,51 +1,33 @@
 import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { InputType, ObjectType, Field } from '@nestjs/graphql';
 import { MediaType } from '../../../prisma/generated/client';
 
+@InputType()
 export class UploadIntentDto {
-  @ApiProperty({
-    description: 'Type of media to upload',
-    enum: ['IMAGE', 'VIDEO', 'AUDIO'],
-    example: 'IMAGE',
-  })
+  @Field(() => String)
   @IsEnum(['IMAGE', 'VIDEO', 'AUDIO'])
   @IsNotEmpty()
   mediaType: MediaType;
 
-  @ApiProperty({
-    description: 'MIME type of the file',
-    example: 'image/jpeg',
-  })
+  @Field(() => String)
   @IsString()
   @IsNotEmpty()
   mimeType: string;
 
-  @ApiProperty({
-    description: 'Name of the file',
-    example: 'photo.jpg',
-  })
+  @Field(() => String)
   @IsString()
   @IsNotEmpty()
   fileName: string;
 }
 
+@ObjectType()
 export class UploadIntentResponseDto {
-  @ApiProperty({
-    description: 'Presigned URL for uploading the file',
-    example: 'https://bucket.s3.region.amazonaws.com/...',
-  })
+  @Field(() => String)
   presignedUploadUrl: string;
 
-  @ApiProperty({
-    description: 'Final public URL of the uploaded file',
-    example: 'https://bucket.s3.region.amazonaws.com/soma/user-id/...',
-  })
+  @Field(() => String)
   finalPublicUrl: string;
 
-  @ApiProperty({
-    description:
-      'S3 object key — pass this back when creating a post with media',
-    example: 'soma/user-id/1744444800000-f3a9c1b2e4d50f87.jpg',
-  })
+  @Field(() => String)
   key: string;
 }

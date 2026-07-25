@@ -1,22 +1,29 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateVoteDto } from './dto/create-vote.dto';
 import { DeleteVoteDto } from './dto/delete-vote.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VoteTargetType } from '../../prisma/generated/client';
 import { Vote } from './entities/vote.entity';
 import { Prisma } from 'src/prisma/generated/client';
+import { InvalidInputError } from '../../common/errors/graphql-errors';
+
+export type VoteResult = Vote | InvalidInputError;
 
 @Injectable()
 export class VotesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async upsert(userId: string, createVoteDto: CreateVoteDto): Promise<Vote> {
+  async upsert(
+    userId: string,
+    createVoteDto: CreateVoteDto,
+  ): Promise<VoteResult> {
     const { targetType, targetId, value } = createVoteDto;
 
-    // Validate target existence
-    await this.validateTarget(targetType, targetId);
+    const validationError = await this.validateTarget(targetType, targetId);
+    if (validationError) {
+      return validationError;
+    }
 
-    // Upsert the vote
     return this.prisma.vote.upsert({
       where: {
         userId_targetType_targetId: {
@@ -37,7 +44,7 @@ export class VotesService {
     });
   }
 
-  async remove(userId: string, deleteVoteDto: DeleteVoteDto): Promise<void> {
+  async remove(userId: string, deleteVoteDto: DeleteVoteDto): Promise<boolean> {
     const { targetType, targetId } = deleteVoteDto;
 
     try {
@@ -50,23 +57,22 @@ export class VotesService {
           },
         },
       });
+      return true;
     } catch (error: unknown) {
-      // If vote doesn't exist, we can treat it as success or ignore for idempotency
-      // P2025 is "Record to delete does not exist."
-
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
-        throw error;
+        return true;
       }
+      throw error;
     }
   }
 
   private async validateTarget(
     targetType: VoteTargetType,
     targetId: string,
-  ): Promise<void> {
+  ): Promise<InvalidInputError | null> {
     switch (targetType) {
       case VoteTargetType.POST: {
         const post = await this.prisma.post.findUnique({
@@ -74,7 +80,7 @@ export class VotesService {
         });
 
         if (!post) {
-          throw new BadRequestException(`Post with id '${targetId}' not found`);
+          return new InvalidInputError(`Post with id '${targetId}' not found`);
         }
 
         break;
@@ -84,16 +90,17 @@ export class VotesService {
           where: { id: targetId },
         });
         if (!comment) {
-          throw new BadRequestException(
+          return new InvalidInputError(
             `Comment with id '${targetId}' not found`,
           );
         }
         break;
       }
       default:
-        throw new BadRequestException(
+        return new InvalidInputError(
           `Invalid target type '${targetType as string}'`,
         );
     }
+    return null;
   }
 }

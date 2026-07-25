@@ -1,17 +1,19 @@
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateSomaDto } from './dto/create-soma.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Soma } from './entities/soma.entity';
+import {
+  NotFoundError,
+  InvalidInputError,
+} from '../../common/errors/graphql-errors';
+
+export type SomaResult = Soma | InvalidInputError | NotFoundError;
 
 @Injectable()
 export class SomaService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createSomaDto: CreateSomaDto): Promise<Soma> {
+  async create(createSomaDto: CreateSomaDto): Promise<SomaResult> {
     const { name, slug, description } = createSomaDto;
 
     const existing = await this.prisma.soma.findUnique({
@@ -19,7 +21,7 @@ export class SomaService {
     });
 
     if (existing) {
-      throw new ConflictException(`Soma with slug '${slug}' already exists`);
+      return new InvalidInputError(`Soma with slug '${slug}' already exists`);
     }
 
     return this.prisma.soma.create({
@@ -39,13 +41,13 @@ export class SomaService {
     });
   }
 
-  async findBySlug(slug: string): Promise<Soma> {
+  async findBySlug(slug: string): Promise<SomaResult> {
     const soma = await this.prisma.soma.findUnique({
       where: { slug: slug.toLowerCase() },
     });
 
     if (!soma) {
-      throw new NotFoundException(`Soma with slug '${slug}' not found`);
+      return new NotFoundError(`Soma with slug '${slug}' not found`);
     }
 
     return soma;

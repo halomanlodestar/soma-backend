@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
 import { SomaService } from './soma.service';
-import { SomaController } from './soma.controller';
+import { SomaResolver } from './soma.resolver';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Module({
-  controllers: [SomaController],
-  providers: [SomaService, PrismaService],
-  exports: [SomaService],
+  providers: [SomaService, SomaResolver, PrismaService],
 })
 export class SomaModule {}

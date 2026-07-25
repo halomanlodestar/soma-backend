@@ -1,24 +1,22 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 
+@ObjectType()
 export class Soma {
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ example: 'tech-news' })
+  @Field(() => String)
   slug: string;
 
-  @ApiProperty({ example: 'Technology News' })
+  @Field(() => String)
   name: string;
 
-  @ApiProperty({
-    example: 'A community for discussing the latest in technology',
-    nullable: true,
-  })
+  @Field(() => String, { nullable: true })
   description: string | null;
 
-  @ApiProperty()
+  @Field(() => Date)
   createdAt: Date;
 
-  @ApiProperty()
+  @Field(() => Date)
   updatedAt: Date;
 }

@@ -1,11 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { StorageService } from './storage/storage.service';
 import {
@@ -19,32 +13,19 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
 
-@ApiTags('Media')
-@Controller()
-export class MediaController {
+@Resolver(() => MediaCollection)
+export class MediaResolver {
   constructor(
     private readonly mediaService: MediaService,
     private readonly storageService: StorageService,
   ) {}
 
-  @Post('media/upload-intent')
+  @Mutation(() => UploadIntentResponseDto)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('CREATOR', 'ADMIN')
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Generate presigned URL for media upload' })
-  @ApiResponse({
-    status: 201,
-    description: 'Presigned upload URL generated',
-    type: UploadIntentResponseDto,
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Creator role required',
-  })
   async createUploadIntent(
     @CurrentUser() user: Express.User,
-    @Body() uploadIntentDto: UploadIntentDto,
+    @Args('data') uploadIntentDto: UploadIntentDto,
   ): Promise<UploadIntentResponseDto> {
     const result = await this.storageService.generatePresignedUploadUrl(
       user.id,
@@ -59,16 +40,9 @@ export class MediaController {
     };
   }
 
-  @Get('posts/:postId/media')
-  @ApiOperation({ summary: 'Get media collection for a post' })
-  @ApiParam({ name: 'postId', description: 'Post UUID', type: String })
-  @ApiResponse({
-    status: 200,
-    description: 'Media collection found or null if no media attached',
-    type: MediaCollection,
-  })
+  @Query(() => MediaCollection, { nullable: true })
   async getMediaByPost(
-    @Param('postId') postId: string,
+    @Args('postId') postId: string,
   ): Promise<MediaCollection | null> {
     return this.mediaService.getMediaByPost(postId);
   }

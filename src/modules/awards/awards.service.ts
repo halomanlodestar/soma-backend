@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateAwardDto } from './dto/create-award.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AwardTargetType } from '../../prisma/generated/client';
 import { Award } from './entities/award.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InvalidInputError } from '../../common/errors/graphql-errors';
+
+export type AwardResult = Award | InvalidInputError;
 
 @Injectable()
 export class AwardsService {
@@ -12,13 +15,22 @@ export class AwardsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async create(userId: string, createAwardDto: CreateAwardDto): Promise<Award> {
+  async create(
+    userId: string,
+    createAwardDto: CreateAwardDto,
+  ): Promise<AwardResult> {
     const { targetType, targetId, name } = createAwardDto;
 
-    const recipientId = await this.validateTargetAndGetAuthor(
+    const recipientOrError = await this.validateTargetAndGetAuthor(
       targetType,
       targetId,
     );
+
+    if (recipientOrError instanceof InvalidInputError) {
+      return recipientOrError;
+    }
+
+    const recipientId = recipientOrError;
 
     const award = await this.prisma.award.create({
       data: {
@@ -29,13 +41,12 @@ export class AwardsService {
       },
     });
 
-    // Notify recipient
     if (recipientId !== userId) {
       await this.notificationsService.create({
         userId: recipientId,
         type: 'AWARD',
         message: `You received a "${name}" award!`,
-        targetType: targetType.toString(), // Convert enum to string
+        targetType: targetType.toString(),
         targetId: targetId,
       });
     }
@@ -43,18 +54,17 @@ export class AwardsService {
     return award;
   }
 
-  // Renamed from validateTarget to better reflect purpose
   private async validateTargetAndGetAuthor(
     targetType: AwardTargetType,
     targetId: string,
-  ): Promise<string> {
+  ): Promise<string | InvalidInputError> {
     if (targetType === AwardTargetType.POST) {
       const post = await this.prisma.post.findUnique({
         where: { id: targetId },
         select: { authorId: true },
       });
       if (!post) {
-        throw new BadRequestException(`Post with id '${targetId}' not found`);
+        return new InvalidInputError(`Post with id '${targetId}' not found`);
       }
       return post.authorId;
     } else if (targetType === AwardTargetType.COMMENT) {
@@ -63,13 +73,11 @@ export class AwardsService {
         select: { authorId: true },
       });
       if (!comment) {
-        throw new BadRequestException(
-          `Comment with id '${targetId}' not found`,
-        );
+        return new InvalidInputError(`Comment with id '${targetId}' not found`);
       }
       return comment.authorId;
     } else {
-      throw new BadRequestException(
+      return new InvalidInputError(
         `Invalid target type '${targetType as string}'`,
       );
     }
@@ -97,32 +105,5 @@ export class AwardsService {
         createdAt: 'desc',
       },
     });
-  }
-
-  private async validateTarget(
-    targetType: AwardTargetType,
-    targetId: string,
-  ): Promise<void> {
-    if (targetType === AwardTargetType.POST) {
-      const post = await this.prisma.post.findUnique({
-        where: { id: targetId },
-      });
-      if (!post) {
-        throw new BadRequestException(`Post with id '${targetId}' not found`);
-      }
-    } else if (targetType === AwardTargetType.COMMENT) {
-      const comment = await this.prisma.comment.findUnique({
-        where: { id: targetId },
-      });
-      if (!comment) {
-        throw new BadRequestException(
-          `Comment with id '${targetId}' not found`,
-        );
-      }
-    } else {
-      throw new BadRequestException(
-        `Invalid target type '${targetType as string}'`,
-      );
-    }
   }
 }

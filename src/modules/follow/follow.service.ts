@@ -1,18 +1,25 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, UserRole } from '../../prisma/generated/client';
+import {
+  NotFoundError,
+  InvalidInputError,
+} from '../../common/errors/graphql-errors';
+import {
+  FollowResponse,
+  FollowStatus,
+  FollowUserDto,
+} from './dto/follow-responses.dto';
+
+export type FollowResult = FollowResponse | InvalidInputError | NotFoundError;
 
 @Injectable()
 export class FollowService {
   constructor(private prisma: PrismaService) {}
 
-  async follow(followerId: string, followingId: string) {
+  async follow(followerId: string, followingId: string): Promise<FollowResult> {
     if (followerId === followingId) {
-      throw new BadRequestException('Cannot follow yourself');
+      return new InvalidInputError('Cannot follow yourself');
     }
 
     const targetUser = await this.prisma.user.findUnique({
@@ -20,11 +27,11 @@ export class FollowService {
     });
 
     if (!targetUser) {
-      throw new NotFoundException('User not found');
+      return new NotFoundError('User not found');
     }
 
     if (targetUser.role !== UserRole.CREATOR) {
-      throw new BadRequestException('Only creators can be followed');
+      return new InvalidInputError('Only creators can be followed');
     }
 
     try {
@@ -40,14 +47,16 @@ export class FollowService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        // Already following, return success as per requirements
         return { success: true, message: 'Already following' };
       }
       throw error;
     }
   }
 
-  async unfollow(followerId: string, followingId: string) {
+  async unfollow(
+    followerId: string,
+    followingId: string,
+  ): Promise<FollowResponse> {
     try {
       await this.prisma.follow.delete({
         where: {
@@ -69,7 +78,7 @@ export class FollowService {
     }
   }
 
-  async getFollowers(userId: string) {
+  async getFollowers(userId: string): Promise<FollowUserDto[]> {
     const follows = await this.prisma.follow.findMany({
       where: { followingId: userId },
       include: {
@@ -79,15 +88,14 @@ export class FollowService {
             username: true,
             displayName: true,
             role: true,
-            // Add other safe public fields if needed
           },
         },
       },
     });
-    return follows.map((f) => f.follower);
+    return follows.map((f) => f.follower as FollowUserDto);
   }
 
-  async getFollowing(userId: string) {
+  async getFollowing(userId: string): Promise<FollowUserDto[]> {
     const follows = await this.prisma.follow.findMany({
       where: { followerId: userId },
       include: {
@@ -101,10 +109,13 @@ export class FollowService {
         },
       },
     });
-    return follows.map((f) => f.following);
+    return follows.map((f) => f.following as FollowUserDto);
   }
 
-  async getFollowStatus(followerId: string, followingId: string) {
+  async getFollowStatus(
+    followerId: string,
+    followingId: string,
+  ): Promise<FollowStatus> {
     const follow = await this.prisma.follow.findUnique({
       where: {
         followerId_followingId: {
