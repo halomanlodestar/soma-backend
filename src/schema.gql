@@ -198,14 +198,13 @@ type Query {
   getFollowing(userId: String!): [FollowUserDto!]!
   getGlobalFeed(cursor: String, limit: Int = 20): [FeedItem!]!
   getMediaByPost(postId: String!): MediaCollection
-  getMyProfile: UserResult!
   getNotifications: [Notification!]!
   getPostById(id: String!): PostResult!
   getPostsBySoma(somaId: String!): [Post!]!
   getSomaBySlug(slug: String!): SomaResult!
   getSomaFeed(cursor: String, limit: Int = 20, somaId: String!): [FeedItem!]!
   getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
-  me: UserResponseDto!
+  me: UserResult!
   userByUsername(username: String!): UserResult!
 }
 

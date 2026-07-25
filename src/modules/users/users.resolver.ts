@@ -30,9 +30,9 @@ export const UserResultUnion = createUnionType({
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
-  @Query(() => UserResultUnion, { name: 'getMyProfile' })
+  @Query(() => UserResultUnion, { name: 'me' })
   @UseGuards(JwtAuthGuard)
-  async getMyProfile(@CurrentUser() user: Express.User): Promise<UserResult> {
+  async me(@CurrentUser() user: Express.User): Promise<UserResult> {
     return this.usersService.findById(user.id);
   }
 
