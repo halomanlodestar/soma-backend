@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "graphql-schema": {
+      "source": "apollographql/skills",
+      "sourceType": "github",
+      "skillPath": "skills/graphql-schema/SKILL.md",
+      "computedHash": "2b3566d8b7516fceda0855aa7792b6b1bcfa63b52a0e35f2198dd89ebdf61485"
+    },
+    "nestjs-best-practices": {
+      "source": "kadajett/agent-nestjs-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs-best-practices/SKILL.md",
+      "computedHash": "29c326e77d1462ed9526996acae5da0cf4003146982abc8c67378f5dbad6b181"
+    }
+  }
+}
