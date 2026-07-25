@@ -1,41 +1,28 @@
-import { ApiProperty } from '@nestjs/swagger';
-// import { PostVisibility } from '../../../prisma/generated/client';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 
+@ObjectType()
 export class Post {
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ example: 'The Future of AI in 2025' })
+  @Field(() => String)
   title: string;
 
-  @ApiProperty({
-    example: 'Here are my thoughts on AI developments...',
-    nullable: true,
-  })
+  @Field(() => String, { nullable: true })
   body: string | null;
 
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174001' })
+  @Field(() => String)
   authorId: string;
 
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174002' })
+  @Field(() => String)
   somaId: string;
 
-  @ApiProperty({
-    example: 0,
-    description: 'Number of times the post has been viewed',
-  })
+  @Field(() => Int)
   impressions: number;
 
-  // @ApiProperty({
-  //   enum: PostVisibility,
-  //   example: PostVisibility.PUBLIC,
-  //   description: 'Visibility state of the post',
-  // })
-  // visibility: PostVisibility;
-
-  @ApiProperty()
+  @Field(() => Date)
   createdAt: Date;
 
-  @ApiProperty()
+  @Field(() => Date)
   updatedAt: Date;
 }

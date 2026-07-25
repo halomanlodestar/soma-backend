@@ -2,22 +2,91 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type Comment {
+  authorId: String!
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  parentCommentId: String
+  postId: String!
+  updatedAt: DateTime!
+}
+
+union CommentResult = Comment | InvalidInputError | NotFoundError | UnauthorizedError
+
+input CreateCommentDto {
+  content: String!
+}
+
+input CreateMediaItemDto {
+  key: String!
+  type: String!
+}
+
+input CreatePostDto {
+  body: String
+  media: [CreateMediaItemDto!]
+  somaId: String!
+  title: String!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
 
+type InvalidInputError {
+  message: String!
+}
+
 type Mutation {
+  createComment(data: CreateCommentDto!, postId: String!): CommentResult!
+  createPost(data: CreatePostDto!): PostResult!
+  deleteComment(id: String!): CommentResult!
+  deletePost(id: String!): PostResult!
+  replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
+  updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
+  updatePost(data: UpdatePostDto!, id: String!): PostResult!
 }
 
 type NotFoundError {
   message: String!
 }
 
+type Post {
+  authorId: String!
+  body: String
+  createdAt: DateTime!
+  id: ID!
+  impressions: Int!
+  somaId: String!
+  title: String!
+  updatedAt: DateTime!
+}
+
+union PostResult = InvalidInputError | NotFoundError | Post | UnauthorizedError
+
 type Query {
+  getCommentsByPost(postId: String!): [Comment!]!
   getMyProfile: UserResult!
+  getPostById(id: String!): PostResult!
+  getPostsBySoma(somaId: String!): [Post!]!
+  getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
   userByUsername(username: String!): UserResult!
+}
+
+type UnauthorizedError {
+  message: String!
+}
+
+input UpdateCommentDto {
+  content: String
+}
+
+input UpdatePostDto {
+  body: String
+  title: String
 }
 
 input UpdateUserProfileDto {

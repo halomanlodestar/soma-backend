@@ -1,14 +1,21 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Comment } from './entities/comment.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  InvalidInputError,
+  BaseError,
+} from '../../common/errors/graphql-errors';
+
+export type CommentResult =
+  | Comment
+  | NotFoundError
+  | UnauthorizedError
+  | InvalidInputError;
 
 @Injectable()
 export class CommentsService {
@@ -21,13 +28,13 @@ export class CommentsService {
     userId: string,
     postId: string,
     createCommentDto: CreateCommentDto,
-  ): Promise<Comment> {
+  ): Promise<CommentResult> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
     });
 
     if (!post) {
-      throw new BadRequestException(`Post with id '${postId}' does not exist`);
+      return new InvalidInputError(`Post with id '${postId}' does not exist`);
     }
 
     const comment = await this.prisma.comment.create({
@@ -55,13 +62,13 @@ export class CommentsService {
     userId: string,
     parentCommentId: string,
     createCommentDto: CreateCommentDto,
-  ): Promise<Comment> {
+  ): Promise<CommentResult> {
     const parent = await this.prisma.comment.findUnique({
       where: { id: parentCommentId },
     });
 
     if (!parent) {
-      throw new BadRequestException(
+      return new InvalidInputError(
         `Parent comment with id '${parentCommentId}' does not exist`,
       );
     }
@@ -85,13 +92,13 @@ export class CommentsService {
     });
   }
 
-  async findOne(id: string): Promise<Comment> {
+  async findOne(id: string): Promise<CommentResult> {
     const comment = await this.prisma.comment.findUnique({
       where: { id },
     });
 
     if (!comment) {
-      throw new NotFoundException(`Comment with id '${id}' not found`);
+      return new NotFoundError(`Comment with id '${id}' not found`);
     }
 
     return comment;
@@ -102,11 +109,15 @@ export class CommentsService {
     userRole: string,
     commentId: string,
     updateCommentDto: UpdateCommentDto,
-  ): Promise<Comment> {
-    const comment = await this.findOne(commentId);
+  ): Promise<CommentResult> {
+    const commentResult = await this.findOne(commentId);
 
-    if (comment.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException(
+    if (commentResult instanceof BaseError) {
+      return commentResult;
+    }
+
+    if (commentResult.authorId !== userId && userRole !== 'ADMIN') {
+      return new UnauthorizedError(
         'You can only update your own comments unless you are an admin',
       );
     }
@@ -121,11 +132,15 @@ export class CommentsService {
     userId: string,
     userRole: string,
     commentId: string,
-  ): Promise<Comment> {
-    const comment = await this.findOne(commentId);
+  ): Promise<CommentResult> {
+    const commentResult = await this.findOne(commentId);
 
-    if (comment.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException(
+    if (commentResult instanceof BaseError) {
+      return commentResult;
+    }
+
+    if (commentResult.authorId !== userId && userRole !== 'ADMIN') {
+      return new UnauthorizedError(
         'You can only delete your own comments unless you are an admin',
       );
     }

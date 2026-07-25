@@ -1,25 +1,26 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 import { Comment as PrismaComment } from '../../../prisma/generated/client';
 
+@ObjectType()
 export class Comment implements PrismaComment {
-  @ApiProperty({ description: 'Comment UUID' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ description: 'Content of the comment' })
+  @Field(() => String)
   content: string;
 
-  @ApiProperty({ description: 'Author UUID' })
+  @Field(() => String)
   authorId: string;
 
-  @ApiProperty({ description: 'Post UUID' })
+  @Field(() => String)
   postId: string;
 
-  @ApiProperty({ description: 'Parent Comment UUID', nullable: true })
+  @Field(() => String, { nullable: true })
   parentCommentId: string | null;
 
-  @ApiProperty({ description: 'Creation timestamp' })
+  @Field(() => Date)
   createdAt: Date;
 
-  @ApiProperty({ description: 'Last update timestamp' })
+  @Field(() => Date)
   updatedAt: Date;
 }
