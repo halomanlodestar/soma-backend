@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { join } from 'path';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { UsersModule } from './modules/users/users.module';
@@ -17,6 +20,27 @@ import { FollowModule } from './modules/follow/follow.module';
 
 @Module({
   imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
+      playground: true,
+      includeStacktraceInErrorResponses: false,
+      formatError: (error) => {
+        const originalError = error.extensions?.originalError as any;
+        if (!originalError) {
+          return {
+            message: error.message,
+            code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
+          };
+        }
+        return {
+          message: originalError.message || error.message,
+          code: originalError.error || error.extensions?.code,
+          statusCode: originalError.statusCode,
+        };
+      },
+    }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

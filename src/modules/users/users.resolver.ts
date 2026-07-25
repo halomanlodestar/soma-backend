@@ -1,15 +1,17 @@
-import { Controller, Get, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserResponseDto } from './dto/user-response.dto';
+import type { Express } from 'express';
 
-@Controller('users')
-export class UsersController {
+@Resolver(() => UserResponseDto)
+export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('me')
+  @Query(() => UserResponseDto, { name: 'getMyProfile' })
   @UseGuards(JwtAuthGuard)
   async getMyProfile(
     @CurrentUser() user: Express.User,
@@ -17,19 +19,19 @@ export class UsersController {
     return this.usersService.findById(user.id);
   }
 
-  @Patch('me')
+  @Query(() => UserResponseDto, { name: 'userByUsername' })
+  async getUserByUsername(
+    @Args('username') username: string,
+  ): Promise<UserResponseDto> {
+    return this.usersService.findByUsername(username);
+  }
+
+  @Mutation(() => UserResponseDto)
   @UseGuards(JwtAuthGuard)
   async updateMyProfile(
     @CurrentUser() user: Express.User,
-    @Body() updateUserProfileDto: UpdateUserProfileDto,
+    @Args('data') updateUserProfileDto: UpdateUserProfileDto,
   ): Promise<UserResponseDto> {
     return this.usersService.updateProfile(user.id, updateUserProfileDto);
-  }
-
-  @Get(':username')
-  async getUserByUsername(
-    @Param('username') username: string,
-  ): Promise<UserResponseDto> {
-    return this.usersService.findByUsername(username);
   }
 }
