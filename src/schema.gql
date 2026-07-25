@@ -1,0 +1,274 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Award {
+  awardedById: String!
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  targetId: String!
+  targetType: String!
+}
+
+union AwardResult = Award | InvalidInputError
+
+type Comment {
+  authorId: String!
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  parentCommentId: String
+  postId: String!
+  updatedAt: DateTime!
+}
+
+union CommentResult = Comment | InvalidInputError | NotFoundError | UnauthorizedError
+
+input CreateAwardDto {
+  name: String!
+  targetId: String!
+  targetType: String!
+}
+
+input CreateCommentDto {
+  content: String!
+}
+
+input CreateMediaItemDto {
+  key: String!
+  type: String!
+}
+
+input CreatePostDto {
+  body: String
+  media: [CreateMediaItemDto!]
+  somaId: String!
+  title: String!
+}
+
+input CreateSomaDto {
+  description: String
+  name: String!
+  slug: String!
+}
+
+input CreateVoteDto {
+  targetId: String!
+  targetType: String!
+  value: Int!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+input DeleteVoteDto {
+  targetId: String!
+  targetType: String!
+}
+
+type FeedItem {
+  author: FeedUser!
+  awardCount: Int!
+  body: String
+  createdAt: DateTime!
+  id: ID!
+  media: FeedMediaCollection
+  soma: FeedSoma!
+  title: String!
+  voteCount: Int!
+}
+
+type FeedMediaCollection {
+  items: [FeedMediaItem!]!
+}
+
+type FeedMediaItem {
+  originalUrl: String!
+  type: String!
+}
+
+type FeedSoma {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
+type FeedUser {
+  displayName: String
+  id: ID!
+  username: String!
+}
+
+type FollowResponse {
+  message: String
+  success: Boolean!
+}
+
+union FollowResult = FollowResponse | InvalidInputError | NotFoundError
+
+type FollowStatus {
+  isFollowing: Boolean!
+}
+
+type FollowUserDto {
+  displayName: String
+  id: ID!
+  role: String!
+  username: String!
+}
+
+type InvalidInputError {
+  message: String!
+}
+
+type MediaCollection {
+  createdAt: DateTime!
+  id: ID!
+  items: [MediaItem!]!
+  postId: String!
+}
+
+type MediaItem {
+  collectionId: String!
+  createdAt: DateTime!
+  id: ID!
+  originalUrl: String!
+  type: String!
+}
+
+type Mutation {
+  createAward(data: CreateAwardDto!): AwardResult!
+  createComment(data: CreateCommentDto!, postId: String!): CommentResult!
+  createPost(data: CreatePostDto!): PostResult!
+  createSoma(data: CreateSomaDto!): SomaResult!
+  createUploadIntent(data: UploadIntentDto!): UploadIntentResponseDto!
+  deleteComment(id: String!): CommentResult!
+  deletePost(id: String!): PostResult!
+  follow(userId: String!): FollowResult!
+  markNotificationAsRead(id: String!): NotificationResult!
+  removeVote(data: DeleteVoteDto!): Boolean!
+  replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
+  unfollow(userId: String!): FollowResponse!
+  updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
+  updateMyProfile(data: UpdateUserProfileDto!): UserResult!
+  updatePost(data: UpdatePostDto!, id: String!): PostResult!
+  upsertVote(data: CreateVoteDto!): VoteResult!
+}
+
+type NotFoundError {
+  message: String!
+}
+
+type Notification {
+  createdAt: DateTime!
+  id: ID!
+  message: String!
+  readAt: DateTime
+  targetId: String
+  targetType: String
+  type: String!
+  userId: String!
+}
+
+union NotificationResult = NotFoundError | Notification | UnauthorizedError
+
+type Post {
+  authorId: String!
+  body: String
+  createdAt: DateTime!
+  id: ID!
+  impressions: Int!
+  somaId: String!
+  title: String!
+  updatedAt: DateTime!
+}
+
+union PostResult = InvalidInputError | NotFoundError | Post | UnauthorizedError
+
+type Query {
+  getAllSomas: [Soma!]!
+  getAwardsByComment(commentId: String!): [Award!]!
+  getAwardsByPost(postId: String!): [Award!]!
+  getCommentsByPost(postId: String!): [Comment!]!
+  getFollowStatus(userId: String!): FollowStatus!
+  getFollowers(userId: String!): [FollowUserDto!]!
+  getFollowing(userId: String!): [FollowUserDto!]!
+  getGlobalFeed(cursor: String, limit: Int = 20): [FeedItem!]!
+  getMediaByPost(postId: String!): MediaCollection
+  getNotifications: [Notification!]!
+  getPostById(id: String!): PostResult!
+  getPostsBySoma(somaId: String!): [Post!]!
+  getSomaBySlug(slug: String!): SomaResult!
+  getSomaFeed(cursor: String, limit: Int = 20, somaId: String!): [FeedItem!]!
+  getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
+  me: UserResult!
+  userByUsername(username: String!): UserResult!
+}
+
+type Soma {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  name: String!
+  slug: String!
+  updatedAt: DateTime!
+}
+
+union SomaResult = InvalidInputError | NotFoundError | Soma
+
+type UnauthorizedError {
+  message: String!
+}
+
+input UpdateCommentDto {
+  content: String
+}
+
+input UpdatePostDto {
+  body: String
+  title: String
+}
+
+input UpdateUserProfileDto {
+  bio: String
+  displayName: String
+}
+
+input UploadIntentDto {
+  fileName: String!
+  mediaType: String!
+  mimeType: String!
+}
+
+type UploadIntentResponseDto {
+  finalPublicUrl: String!
+  key: String!
+  presignedUploadUrl: String!
+}
+
+type UserResponseDto {
+  bio: String
+  createdAt: DateTime!
+  displayName: String
+  email: String!
+  id: ID!
+  role: String!
+  updatedAt: DateTime!
+  username: String!
+}
+
+union UserResult = NotFoundError | UserResponseDto
+
+type Vote {
+  createdAt: DateTime!
+  id: ID!
+  targetId: String!
+  targetType: String!
+  userId: String!
+  value: Int!
+}
+
+union VoteResult = InvalidInputError | Vote

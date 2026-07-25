@@ -7,8 +7,6 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Res } from '@nestjs/common';
@@ -40,11 +38,5 @@ export class AuthController {
     return res.redirect(
       `${frontendUrl}/auth/callback?accessToken=${accessToken}`,
     );
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  getCurrentUser(@CurrentUser() user: Express.User) {
-    return user;
   }
 }

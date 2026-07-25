@@ -1,11 +1,16 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Notification } from './entities/notification.entity';
+import {
+  NotFoundError,
+  UnauthorizedError,
+} from '../../common/errors/graphql-errors';
+
+export type NotificationResult =
+  | Notification
+  | NotFoundError
+  | UnauthorizedError;
 
 @Injectable()
 export class NotificationsService {
@@ -29,19 +34,19 @@ export class NotificationsService {
   async markAsRead(
     userId: string,
     notificationId: string,
-  ): Promise<Notification> {
+  ): Promise<NotificationResult> {
     const notification = await this.prisma.notification.findUnique({
       where: { id: notificationId },
     });
 
     if (!notification) {
-      throw new NotFoundException(
+      return new NotFoundError(
         `Notification with id '${notificationId}' not found`,
       );
     }
 
     if (notification.userId !== userId) {
-      throw new ForbiddenException('You can only read your own notifications');
+      return new UnauthorizedError('You can only read your own notifications');
     }
 
     return this.prisma.notification.update({

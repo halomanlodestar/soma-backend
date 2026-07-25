@@ -1,25 +1,26 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import {
   Vote as PrismaVote,
   VoteTargetType,
 } from '../../../prisma/generated/client';
 
+@ObjectType()
 export class Vote implements PrismaVote {
-  @ApiProperty({ description: 'Vote UUID' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ description: 'User UUID who cast the vote' })
+  @Field(() => String)
   userId: string;
 
-  @ApiProperty({ description: 'Target type', enum: VoteTargetType })
+  @Field(() => String)
   targetType: VoteTargetType;
 
-  @ApiProperty({ description: 'Target UUID' })
+  @Field(() => String)
   targetId: string;
 
-  @ApiProperty({ description: 'Vote value (+1 or -1)' })
+  @Field(() => Int)
   value: number;
 
-  @ApiProperty({ description: 'Creation timestamp' })
+  @Field(() => Date)
   createdAt: Date;
 }

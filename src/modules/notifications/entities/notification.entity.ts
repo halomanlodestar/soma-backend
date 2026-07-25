@@ -1,31 +1,29 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 import { Notification as PrismaNotification } from '../../../prisma/generated/client';
 
+@ObjectType()
 export class Notification implements PrismaNotification {
-  @ApiProperty({ description: 'Notification UUID' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ description: 'Recipient User UUID' })
+  @Field(() => String)
   userId: string;
 
-  @ApiProperty({ description: 'Notification type (e.g. COMMENT, AWARD)' })
+  @Field(() => String)
   type: string;
 
-  @ApiProperty({ description: 'Notification message' })
+  @Field(() => String)
   message: string;
 
-  @ApiProperty({
-    description: 'Target type (e.g. POST, COMMENT)',
-    nullable: true,
-  })
+  @Field(() => String, { nullable: true })
   targetType: string | null;
 
-  @ApiProperty({ description: 'Target UUID', nullable: true })
+  @Field(() => String, { nullable: true })
   targetId: string | null;
 
-  @ApiProperty({ description: 'Read timestamp', nullable: true })
+  @Field(() => Date, { nullable: true })
   readAt: Date | null;
 
-  @ApiProperty({ description: 'Creation timestamp' })
+  @Field(() => Date)
   createdAt: Date;
 }

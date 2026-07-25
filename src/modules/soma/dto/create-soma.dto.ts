@@ -1,20 +1,14 @@
 import { IsString, IsNotEmpty, Matches, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { InputType, Field } from '@nestjs/graphql';
 
+@InputType()
 export class CreateSomaDto {
-  @ApiProperty({
-    description: 'Name of the soma',
-    example: 'Technology News',
-  })
+  @Field(() => String)
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({
-    description:
-      'URL-safe slug for the soma (lowercase, alphanumeric and hyphens only)',
-    example: 'tech-news',
-  })
+  @Field(() => String)
   @IsString()
   @IsNotEmpty()
   @Matches(/^[a-z0-9-]+$/, {
@@ -23,11 +17,7 @@ export class CreateSomaDto {
   })
   slug: string;
 
-  @ApiProperty({
-    description: 'Description of the soma',
-    example: 'A community for discussing the latest in technology',
-    required: false,
-  })
+  @Field(() => String, { nullable: true })
   @IsString()
   @IsOptional()
   description?: string;

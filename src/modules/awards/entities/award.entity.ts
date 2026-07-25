@@ -1,25 +1,26 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
 import {
   Award as PrismaAward,
   AwardTargetType,
 } from '../../../prisma/generated/client';
 
+@ObjectType()
 export class Award implements PrismaAward {
-  @ApiProperty({ description: 'Award UUID' })
+  @Field(() => ID)
   id: string;
 
-  @ApiProperty({ description: 'User UUID who gave the award' })
+  @Field(() => String)
   awardedById: string;
 
-  @ApiProperty({ description: 'Target type', enum: AwardTargetType })
+  @Field(() => String)
   targetType: AwardTargetType;
 
-  @ApiProperty({ description: 'Target UUID' })
+  @Field(() => String)
   targetId: string;
 
-  @ApiProperty({ description: 'Name of the award' })
+  @Field(() => String)
   name: string;
 
-  @ApiProperty({ description: 'Creation timestamp' })
+  @Field(() => Date)
   createdAt: Date;
 }

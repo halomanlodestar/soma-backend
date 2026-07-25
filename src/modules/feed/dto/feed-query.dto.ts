@@ -1,22 +1,15 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { ArgsType, Field, Int } from '@nestjs/graphql';
 import { IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
+@ArgsType()
 export class FeedQueryDto {
-  @ApiPropertyOptional({
-    description: 'Number of posts to return (default: 20)',
-    default: 20,
-    minimum: 1,
-  })
+  @Field(() => Int, { nullable: true, defaultValue: 20 })
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Type(() => Number)
   limit?: number = 20;
 
-  @ApiPropertyOptional({
-    description: 'Cursor for pagination (Post ID)',
-  })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   @IsUUID()

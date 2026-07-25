@@ -1,29 +1,20 @@
 import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { InputType, Field } from '@nestjs/graphql';
 import { AwardTargetType } from '../../../prisma/generated/client';
 
+@InputType()
 export class CreateAwardDto {
-  @ApiProperty({
-    description: 'The type of the target being awarded',
-    enum: AwardTargetType,
-    example: 'POST',
-  })
+  @Field(() => String)
   @IsEnum(AwardTargetType)
   @IsNotEmpty()
   targetType: AwardTargetType;
 
-  @ApiProperty({
-    description: 'The UUID of the target being awarded',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
+  @Field(() => String)
   @IsUUID()
   @IsNotEmpty()
   targetId: string;
 
-  @ApiProperty({
-    description: 'Name of the award',
-    example: 'Gold',
-  })
+  @Field(() => String)
   @IsString()
   @IsNotEmpty()
   name: string;

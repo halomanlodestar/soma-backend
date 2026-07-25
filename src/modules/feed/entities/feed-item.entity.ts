@@ -1,38 +1,70 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 
-class FeedUser {
-  @ApiProperty() id: string;
-  @ApiProperty() username: string;
-  @ApiProperty({ nullable: true }) displayName: string | null;
+@ObjectType()
+export class FeedUser {
+  @Field(() => ID)
+  id: string;
+
+  @Field(() => String)
+  username: string;
+
+  @Field(() => String, { nullable: true })
+  displayName: string | null;
 }
 
-class FeedSoma {
-  @ApiProperty() id: string;
-  @ApiProperty() slug: string;
-  @ApiProperty() name: string;
+@ObjectType()
+export class FeedSoma {
+  @Field(() => ID)
+  id: string;
+
+  @Field(() => String)
+  slug: string;
+
+  @Field(() => String)
+  name: string;
 }
 
-class FeedMediaItem {
-  @ApiProperty() type: string; // e.g. IMAGE, VIDEO
-  @ApiProperty() originalUrl: string;
+@ObjectType()
+export class FeedMediaItem {
+  @Field(() => String)
+  type: string;
+
+  @Field(() => String)
+  originalUrl: string;
 }
 
-class FeedMediaCollection {
-  @ApiProperty({ type: [FeedMediaItem] }) items: FeedMediaItem[];
+@ObjectType()
+export class FeedMediaCollection {
+  @Field(() => [FeedMediaItem])
+  items: FeedMediaItem[];
 }
 
+@ObjectType()
 export class FeedItem {
-  @ApiProperty() id: string;
-  @ApiProperty() title: string;
-  @ApiProperty({ nullable: true }) body: string | null;
-  @ApiProperty() createdAt: Date;
+  @Field(() => ID)
+  id: string;
 
-  @ApiProperty({ type: FeedUser }) author: FeedUser;
-  @ApiProperty({ type: FeedSoma }) soma: FeedSoma;
+  @Field(() => String)
+  title: string;
 
-  @ApiProperty({ type: FeedMediaCollection, nullable: true })
+  @Field(() => String, { nullable: true })
+  body: string | null;
+
+  @Field(() => Date)
+  createdAt: Date;
+
+  @Field(() => FeedUser)
+  author: FeedUser;
+
+  @Field(() => FeedSoma)
+  soma: FeedSoma;
+
+  @Field(() => FeedMediaCollection, { nullable: true })
   media: FeedMediaCollection | null;
 
-  @ApiProperty() voteCount: number;
-  @ApiProperty() awardCount: number;
+  @Field(() => Int)
+  voteCount: number;
+
+  @Field(() => Int)
+  awardCount: number;
 }

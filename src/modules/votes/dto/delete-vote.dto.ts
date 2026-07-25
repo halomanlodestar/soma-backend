@@ -1,21 +1,15 @@
 import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { InputType, Field } from '@nestjs/graphql';
 import { VoteTargetType } from '../../../prisma/generated/client';
 
+@InputType()
 export class DeleteVoteDto {
-  @ApiProperty({
-    description: 'The type of the target being un-voted',
-    enum: VoteTargetType,
-    example: 'POST',
-  })
+  @Field(() => String)
   @IsEnum(VoteTargetType)
   @IsNotEmpty()
   targetType: VoteTargetType;
 
-  @ApiProperty({
-    description: 'The UUID of the target being un-voted',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
+  @Field(() => String)
   @IsUUID()
   @IsNotEmpty()
   targetId: string;

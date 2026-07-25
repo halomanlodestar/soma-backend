@@ -1,4 +1,7 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { UsersModule } from './modules/users/users.module';
@@ -14,9 +17,19 @@ import { MediaModule } from './modules/media/media.module';
 import { AwardsModule } from './modules/awards/awards.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { FollowModule } from './modules/follow/follow.module';
+import { LoggingPlugin } from './common/plugins/logging.plugin';
+import { formatError } from './common/utils/format';
 
 @Module({
   imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
+      playground: true,
+      includeStacktraceInErrorResponses: false,
+      formatError,
+    }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -39,6 +52,6 @@ import { FollowModule } from './modules/follow/follow.module';
     FeedModule,
     FollowModule,
   ],
-  providers: [PrismaService],
+  providers: [PrismaService, LoggingPlugin],
 })
 export class AppModule {}

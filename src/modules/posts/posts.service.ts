@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,6 +8,18 @@ import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { CreatePostJob } from './jobs/create.job';
 import { DeletePostJob } from './jobs/delete.job';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  InvalidInputError,
+  BaseError,
+} from '../../common/errors/graphql-errors';
+
+export type PostResult =
+  | Post
+  | NotFoundError
+  | UnauthorizedError
+  | InvalidInputError;
 
 @Injectable()
 export class PostsService {
@@ -24,7 +31,10 @@ export class PostsService {
     private readonly postDeletionQueue: Queue<DeletePostJob>,
   ) {}
 
-  async create(userId: string, createPostDto: CreatePostDto): Promise<Post> {
+  async create(
+    userId: string,
+    createPostDto: CreatePostDto,
+  ): Promise<PostResult> {
     const { title, body, somaId, media } = createPostDto;
 
     const soma = await this.prisma.soma.findUnique({
@@ -32,7 +42,7 @@ export class PostsService {
     });
 
     if (!soma) {
-      throw new BadRequestException(`Soma with id '${somaId}' does not exist`);
+      return new InvalidInputError(`Soma with id '${somaId}' does not exist`);
     }
 
     const hasMedia = media && media.length > 0;
@@ -125,13 +135,13 @@ export class PostsService {
     );
   }
 
-  async findOne(id: string): Promise<Post> {
+  async findOne(id: string): Promise<PostResult> {
     const post = await this.prisma.post.findFirst({
       where: { id, visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] } },
     });
 
     if (!post) {
-      throw new NotFoundException(`Post with id '${id}' not found`);
+      return new NotFoundError(`Post with id '${id}' not found`);
     }
 
     return post;
@@ -142,11 +152,15 @@ export class PostsService {
     userRole: string,
     postId: string,
     updatePostDto: UpdatePostDto,
-  ): Promise<Post> {
-    const post = await this.findOne(postId);
+  ): Promise<PostResult> {
+    const postResult = await this.findOne(postId);
 
-    if (post.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException('You are not allowed to update this post.');
+    if (postResult instanceof BaseError) {
+      return postResult;
+    }
+
+    if (postResult.authorId !== userId && userRole !== 'ADMIN') {
+      return new UnauthorizedError('You are not allowed to update this post.');
     }
 
     return this.prisma.post.update({
@@ -159,14 +173,18 @@ export class PostsService {
     userId: string,
     userRole: string,
     postId: string,
-  ): Promise<void> {
-    const post = await this.findOne(postId);
+  ): Promise<PostResult> {
+    const postResult = await this.findOne(postId);
 
-    if (post.authorId !== userId && userRole !== 'ADMIN') {
-      throw new ForbiddenException('You are not allowed to delete this post.');
+    if (postResult instanceof BaseError) {
+      return postResult;
     }
 
-    await this.prisma.post.update({
+    if (postResult.authorId !== userId && userRole !== 'ADMIN') {
+      return new UnauthorizedError('You are not allowed to delete this post.');
+    }
+
+    const updatedPost = await this.prisma.post.update({
       where: { id: postId },
       data: { visibility: 'DELETING' },
     });
@@ -174,5 +192,7 @@ export class PostsService {
     await this.postDeletionQueue.add('delete-post', {
       postId,
     } satisfies DeletePostJob);
+
+    return updatedPost;
   }
 }
