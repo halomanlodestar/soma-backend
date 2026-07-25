@@ -1,10 +1,5 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-  createUnionType,
-} from '@nestjs/graphql';
+import { SomaResultUnion } from './dto/soma-results.dto';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { SomaService, SomaResult } from './soma.service';
 import { CreateSomaDto } from './dto/create-soma.dto';
@@ -12,20 +7,6 @@ import { Soma as SomaEntity } from './entities/soma.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import {
-  NotFoundError,
-  InvalidInputError,
-} from '../../common/errors/graphql-errors';
-
-export const SomaResultUnion = createUnionType({
-  name: 'SomaResult',
-  types: () => [SomaEntity, NotFoundError, InvalidInputError] as const,
-  resolveType: (value) => {
-    if (value instanceof NotFoundError) return NotFoundError;
-    if (value instanceof InvalidInputError) return InvalidInputError;
-    return SomaEntity;
-  },
-});
 
 @Resolver(() => SomaEntity)
 export class SomaResolver {

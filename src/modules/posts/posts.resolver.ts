@@ -1,11 +1,5 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-  Int,
-  createUnionType,
-} from '@nestjs/graphql';
+import { PostResultUnion } from './dto/posts-results.dto';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PostsService, PostResult } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -16,23 +10,6 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
-import {
-  NotFoundError,
-  UnauthorizedError,
-  InvalidInputError,
-} from '../../common/errors/graphql-errors';
-
-export const PostResultUnion = createUnionType({
-  name: 'PostResult',
-  types: () =>
-    [PostEntity, NotFoundError, UnauthorizedError, InvalidInputError] as const,
-  resolveType: (value) => {
-    if (value instanceof NotFoundError) return NotFoundError;
-    if (value instanceof UnauthorizedError) return UnauthorizedError;
-    if (value instanceof InvalidInputError) return InvalidInputError;
-    return PostEntity;
-  },
-});
 
 @Resolver(() => PostEntity)
 export class PostsResolver {

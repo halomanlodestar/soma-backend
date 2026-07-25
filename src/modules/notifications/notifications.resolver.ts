@@ -1,10 +1,5 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-  createUnionType,
-} from '@nestjs/graphql';
+import { NotificationResultUnion } from './dto/notifications-results.dto';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import {
   NotificationsService,
@@ -14,20 +9,6 @@ import { Notification as NotificationEntity } from './entities/notification.enti
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
-import {
-  NotFoundError,
-  UnauthorizedError,
-} from '../../common/errors/graphql-errors';
-
-export const NotificationResultUnion = createUnionType({
-  name: 'NotificationResult',
-  types: () => [NotificationEntity, NotFoundError, UnauthorizedError] as const,
-  resolveType: (value) => {
-    if (value instanceof NotFoundError) return NotFoundError;
-    if (value instanceof UnauthorizedError) return UnauthorizedError;
-    return NotificationEntity;
-  },
-});
 
 @Resolver(() => NotificationEntity)
 export class NotificationsResolver {

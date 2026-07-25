@@ -1,10 +1,5 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-  createUnionType,
-} from '@nestjs/graphql';
+import { FollowResultUnion } from './dto/follow-results.dto';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { FollowService, FollowResult } from './follow.service';
 import {
@@ -15,20 +10,6 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
-import {
-  NotFoundError,
-  InvalidInputError,
-} from '../../common/errors/graphql-errors';
-
-export const FollowResultUnion = createUnionType({
-  name: 'FollowResult',
-  types: () => [FollowResponse, NotFoundError, InvalidInputError] as const,
-  resolveType: (value) => {
-    if (value instanceof NotFoundError) return NotFoundError;
-    if (value instanceof InvalidInputError) return InvalidInputError;
-    return FollowResponse;
-  },
-});
 
 @Resolver()
 export class FollowResolver {

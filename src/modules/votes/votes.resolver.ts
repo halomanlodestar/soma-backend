@@ -1,4 +1,5 @@
-import { Resolver, Mutation, Args, createUnionType } from '@nestjs/graphql';
+import { VoteResultUnion } from './dto/votes-results.dto';
+import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { VotesService, VoteResult } from './votes.service';
 import { CreateVoteDto } from './dto/create-vote.dto';
@@ -7,16 +8,6 @@ import { Vote as VoteEntity } from './entities/vote.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
-import { InvalidInputError } from '../../common/errors/graphql-errors';
-
-export const VoteResultUnion = createUnionType({
-  name: 'VoteResult',
-  types: () => [VoteEntity, InvalidInputError] as const,
-  resolveType: (value) => {
-    if (value instanceof InvalidInputError) return InvalidInputError;
-    return VoteEntity;
-  },
-});
 
 @Resolver(() => VoteEntity)
 export class VotesResolver {

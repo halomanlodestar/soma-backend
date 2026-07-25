@@ -1,10 +1,5 @@
-import {
-  Resolver,
-  Query,
-  Mutation,
-  Args,
-  createUnionType,
-} from '@nestjs/graphql';
+import { UserResultUnion } from './dto/users-results.dto';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { UsersService, UserResult } from './users.service';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -12,19 +7,6 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
-import { NotFoundError } from '../../common/errors/graphql-errors';
-
-export const UserResultUnion = createUnionType({
-  name: 'UserResult',
-  types: () => [UserResponseDto, NotFoundError] as const,
-  resolveType: (value) => {
-    if (value instanceof NotFoundError) {
-      return NotFoundError;
-    }
-
-    return UserResponseDto;
-  },
-});
 
 @Resolver(() => UserResponseDto)
 export class UsersResolver {
