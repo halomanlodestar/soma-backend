@@ -17,6 +17,7 @@ import { MediaModule } from './modules/media/media.module';
 import { AwardsModule } from './modules/awards/awards.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { FollowModule } from './modules/follow/follow.module';
+import { LoggingPlugin } from './common/plugins/logging.plugin';
 
 @Module({
   imports: [
@@ -66,6 +67,6 @@ import { FollowModule } from './modules/follow/follow.module';
     FeedModule,
     FollowModule,
   ],
-  providers: [PrismaService],
+  providers: [PrismaService, LoggingPlugin],
 })
 export class AppModule {}
