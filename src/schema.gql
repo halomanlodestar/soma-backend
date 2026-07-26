@@ -218,6 +218,7 @@ type Query {
   getAwardsByComment(commentId: String!): [Award!]!
   getAwardsByPost(postId: String!): [Award!]!
   getCommentsByPost(postId: String!): [Comment!]!
+  getCommentsByUser(userId: String!): [Comment!]!
   getFollowStatus(userId: String!): FollowStatus!
   getFollowers(userId: String!): [FollowUserDto!]!
   getFollowing(userId: String!): [FollowUserDto!]!

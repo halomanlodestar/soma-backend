@@ -91,6 +91,15 @@ export class CommentsService {
     });
   }
 
+  async findAllByUser(userId: string): Promise<Comment[]> {
+    return this.prisma.comment.findMany({
+      where: { authorId: userId },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async findOne(id: string): Promise<CommentResult> {
     const comment = await this.prisma.comment.findUnique({
       where: { id },

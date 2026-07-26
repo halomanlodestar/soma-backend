@@ -62,6 +62,11 @@ export class CommentsResolver {
     return this.commentsService.findAllByPost(postId);
   }
 
+  @Query(() => [CommentEntity])
+  getCommentsByUser(@Args('userId') userId: string): Promise<CommentEntity[]> {
+    return this.commentsService.findAllByUser(userId);
+  }
+
   @Mutation(() => CommentResultUnion)
   @UseGuards(JwtAuthGuard)
   async updateComment(
