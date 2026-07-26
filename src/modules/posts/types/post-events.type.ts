@@ -1,6 +1,10 @@
 import { CreateMediaItemDto } from '../dto/create-media-item.dto';
 
-export interface CreatePostJob {
+export class ProcessMediaEvent {
   postId: string;
   media?: CreateMediaItemDto[];
+}
+
+export class DeletePostEvent {
+  postId: string;
 }

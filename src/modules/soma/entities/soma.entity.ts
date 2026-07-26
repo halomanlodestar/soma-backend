@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 
 @ObjectType()
 export class Soma {
@@ -13,6 +13,15 @@ export class Soma {
 
   @Field(() => String, { nullable: true })
   description: string | null;
+
+  @Field(() => String, { nullable: true })
+  coverUrl?: string | null;
+
+  @Field(() => Int, { defaultValue: 0 })
+  memberCount: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  weeklyVisitorCount: number;
 
   @Field(() => Date)
   createdAt: Date;

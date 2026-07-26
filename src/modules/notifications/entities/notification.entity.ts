@@ -16,10 +16,10 @@ export class Notification implements PrismaNotification {
   message: string;
 
   @Field(() => String, { nullable: true })
-  targetType: string | null;
+  postId: string | null;
 
   @Field(() => String, { nullable: true })
-  targetId: string | null;
+  commentId: string | null;
 
   @Field(() => Date, { nullable: true })
   readAt: Date | null;

@@ -1,7 +1,17 @@
 import { CommentResultUnion } from './dto/comments-results.dto';
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
+import { UsersService } from '../users/users.service';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 import { UseGuards } from '@nestjs/common';
-import { CommentsService, CommentResult } from './comments.service';
+import { CommentsService } from './comments.service';
+import { CommentResult } from './types/comment-result.type';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Comment as CommentEntity } from './entities/comment.entity';
@@ -11,7 +21,19 @@ import type { Express } from 'express';
 
 @Resolver(() => CommentEntity)
 export class CommentsResolver {
-  constructor(private readonly commentsService: CommentsService) {}
+  constructor(
+    private readonly commentsService: CommentsService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  @ResolveField(() => UserResponseDto)
+  async author(@Parent() comment: CommentEntity) {
+    const result = await this.usersService.findById(comment.authorId);
+    if ('message' in result) {
+      throw new Error('Author not found');
+    }
+    return result;
+  }
 
   @Mutation(() => CommentResultUnion)
   @UseGuards(JwtAuthGuard)

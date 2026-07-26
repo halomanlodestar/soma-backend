@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FeedQueryDto } from './dto/feed-query.dto';
 import { FeedItem } from './entities/feed-item.entity';
-import { VoteTargetType, AwardTargetType } from '../../prisma/generated/client';
 
 @Injectable()
 export class FeedService {
@@ -27,13 +26,27 @@ export class FeedService {
       take: limit,
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor } : undefined,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { hotScore: 'desc' },
       include: {
         author: {
-          select: { id: true, username: true, displayName: true },
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            coverUrl: true,
+            isVerified: true,
+          },
         },
         soma: {
-          select: { id: true, slug: true, name: true },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            coverUrl: true,
+            memberCount: true,
+            weeklyVisitorCount: true,
+          },
         },
         media: {
           include: {
@@ -45,48 +58,13 @@ export class FeedService {
       },
     });
 
-    if (posts.length === 0) {
-      return [];
-    }
-
-    const postIds = posts.map((p) => p.id);
-
-    const voteAggregates = await this.prisma.vote.groupBy({
-      by: ['targetId'],
-      where: {
-        targetType: VoteTargetType.POST,
-        targetId: { in: postIds },
-      },
-      _sum: {
-        value: true,
-      },
-    });
-
-    const awardAggregates = await this.prisma.award.groupBy({
-      by: ['targetId'],
-      where: {
-        targetType: AwardTargetType.POST,
-        targetId: { in: postIds },
-      },
-      _count: {
-        _all: true,
-      },
-    });
-
-    const voteMap = new Map<string, number>();
-    voteAggregates.forEach((agg) => {
-      voteMap.set(agg.targetId, agg._sum.value || 0);
-    });
-
-    const awardMap = new Map<string, number>();
-    awardAggregates.forEach((agg) => {
-      awardMap.set(agg.targetId, agg._count._all || 0);
-    });
-
-    return posts.map((post) => ({
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+    return posts.map((post: any) => ({
       id: post.id,
       title: post.title,
       body: post.body,
+      excerpt: post.excerpt,
+      mediaUrl: post.mediaUrl,
       createdAt: post.createdAt,
       author: post.author,
       soma: post.soma,
@@ -98,8 +76,9 @@ export class FeedService {
             })),
           }
         : null,
-      voteCount: voteMap.get(post.id) || 0,
-      awardCount: awardMap.get(post.id) || 0,
+      voteCount: post.voteCount,
+      commentCount: post.commentCount,
+      awardCount: 0,
     }));
   }
 }

@@ -1,4 +1,15 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateSomaDto } from './create-soma.dto';
+import { InputType, Field } from '@nestjs/graphql';
+import { IsOptional, IsString } from 'class-validator';
 
-export class UpdateSomaDto extends PartialType(CreateSomaDto) {}
+@InputType()
+export class UpdateSomaDto {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  coverUrl?: string;
+}

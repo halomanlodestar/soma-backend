@@ -1,10 +1,8 @@
+import { UserResult } from './types/user-result.type';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-import { UserResponseDto } from './dto/user-response.dto';
 import { NotFoundError } from '../../common/errors/graphql-errors';
-
-export type UserResult = UserResponseDto | NotFoundError;
 
 @Injectable()
 export class UsersService {
@@ -44,6 +42,8 @@ export class UsersService {
         data: {
           displayName: updateUserProfileDto.displayName,
           bio: updateUserProfileDto.bio,
+          avatarUrl: updateUserProfileDto.avatarUrl,
+          coverUrl: updateUserProfileDto.coverUrl,
         },
       });
 

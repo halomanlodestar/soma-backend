@@ -3,11 +3,9 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
-import { VoteTargetType } from '../../prisma/generated/client';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
-import { CreatePostJob } from './jobs/create.job';
-import { DeletePostJob } from './jobs/delete.job';
+
+import { ClientProxy } from '@nestjs/microservices';
+import { Inject } from '@nestjs/common';
 import {
   NotFoundError,
   UnauthorizedError,
@@ -25,10 +23,7 @@ export type PostResult =
 export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('post-processing')
-    private readonly postProcessingQueue: Queue<CreatePostJob>,
-    @InjectQueue('post-deletion')
-    private readonly postDeletionQueue: Queue<DeletePostJob>,
+    @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
   ) {}
 
   async create(
@@ -58,10 +53,10 @@ export class PostsService {
     });
 
     if (hasMedia) {
-      await this.postProcessingQueue.add('process-post-media', {
+      this.client.emit('post.process_media', {
         postId: post.id,
         media,
-      } satisfies CreatePostJob);
+      });
     }
 
     return post;
@@ -71,6 +66,18 @@ export class PostsService {
     return this.prisma.post.findMany({
       where: {
         somaId,
+        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async findByUser(userId: string): Promise<Post[]> {
+    return this.prisma.post.findMany({
+      where: {
+        authorId: userId,
         visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
       },
       orderBy: {
@@ -89,50 +96,11 @@ export class PostsService {
         visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
       },
       orderBy: {
-        createdAt: 'desc',
+        hotScore: 'desc',
       },
     });
 
-    const voteAggregates = await this.prisma.vote.groupBy({
-      by: ['targetId'],
-      where: {
-        targetType: VoteTargetType.POST,
-        targetId: { in: posts.map((post) => post.id) },
-      },
-      _sum: { value: true },
-    });
-
-    const scores = new Map(
-      voteAggregates.map((aggregate) => [
-        aggregate.targetId,
-        aggregate._sum.value ?? 0,
-      ]),
-    );
-
-    const postsWithScores = posts.map((post) => {
-      const score = scores.get(post.id) ?? 0;
-      return { ...post, score };
-    });
-
-    postsWithScores.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      return b.createdAt.getTime() - a.createdAt.getTime();
-    });
-
-    return postsWithScores.map(
-      (post): Post => ({
-        id: post.id,
-        title: post.title,
-        body: post.body,
-        authorId: post.authorId,
-        somaId: post.somaId,
-        impressions: post.impressions,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-      }),
-    );
+    return posts;
   }
 
   async findOne(id: string): Promise<PostResult> {
@@ -189,9 +157,7 @@ export class PostsService {
       data: { visibility: 'DELETING' },
     });
 
-    await this.postDeletionQueue.add('delete-post', {
-      postId,
-    } satisfies DeletePostJob);
+    this.client.emit('post.delete', { postId });
 
     return updatedPost;
   }

@@ -4,16 +4,22 @@
 
 type Award {
   awardedById: String!
+  commentId: String
   createdAt: DateTime!
   id: ID!
   name: String!
-  targetId: String!
-  targetType: String!
+  postId: String
 }
 
 union AwardResult = Award | InvalidInputError
 
+enum AwardTargetType {
+  COMMENT
+  POST
+}
+
 type Comment {
+  author: UserResponseDto!
   authorId: String!
   content: String!
   createdAt: DateTime!
@@ -21,6 +27,7 @@ type Comment {
   parentCommentId: String
   postId: String!
   updatedAt: DateTime!
+  voteCount: Int!
 }
 
 union CommentResult = Comment | InvalidInputError | NotFoundError | UnauthorizedError
@@ -28,7 +35,7 @@ union CommentResult = Comment | InvalidInputError | NotFoundError | Unauthorized
 input CreateAwardDto {
   name: String!
   targetId: String!
-  targetType: String!
+  targetType: AwardTargetType!
 }
 
 input CreateCommentDto {
@@ -55,7 +62,7 @@ input CreateSomaDto {
 
 input CreateVoteDto {
   targetId: String!
-  targetType: String!
+  targetType: TargetType!
   value: Int!
 }
 
@@ -66,16 +73,19 @@ scalar DateTime
 
 input DeleteVoteDto {
   targetId: String!
-  targetType: String!
+  targetType: TargetType!
 }
 
 type FeedItem {
   author: FeedUser!
   awardCount: Int!
   body: String
+  commentCount: Int!
   createdAt: DateTime!
+  excerpt: String
   id: ID!
   media: FeedMediaCollection
+  mediaUrl: String
   soma: FeedSoma!
   title: String!
   voteCount: Int!
@@ -91,14 +101,22 @@ type FeedMediaItem {
 }
 
 type FeedSoma {
+  coverUrl: String
   id: ID!
+  memberCount: Int!
   name: String!
   slug: String!
+  weeklyVisitorCount: Int!
 }
 
 type FeedUser {
+  avatarUrl: String
+  awards: [String]
+  coverUrl: String
   displayName: String
   id: ID!
+  isVerified: Boolean!
+  stats: UserStats
   username: String!
 }
 
@@ -155,7 +173,8 @@ type Mutation {
   updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
   updatePost(data: UpdatePostDto!, id: String!): PostResult!
-  upsertVote(data: CreateVoteDto!): VoteResult!
+  updateSoma(data: UpdateSomaDto!, id: String!): SomaResult!
+  upsertVote(data: CreateVoteDto!): Boolean!
 }
 
 type NotFoundError {
@@ -163,12 +182,12 @@ type NotFoundError {
 }
 
 type Notification {
+  commentId: String
   createdAt: DateTime!
   id: ID!
   message: String!
+  postId: String
   readAt: DateTime
-  targetId: String
-  targetType: String
   type: String!
   userId: String!
 }
@@ -176,14 +195,20 @@ type Notification {
 union NotificationResult = NotFoundError | Notification | UnauthorizedError
 
 type Post {
+  author: UserResponseDto!
   authorId: String!
   body: String
+  commentCount: Int!
   createdAt: DateTime!
+  excerpt: String
   id: ID!
   impressions: Int!
+  mediaUrl: String
+  soma: Soma!
   somaId: String!
   title: String!
   updatedAt: DateTime!
+  voteCount: Int!
 }
 
 union PostResult = InvalidInputError | NotFoundError | Post | UnauthorizedError
@@ -201,23 +226,33 @@ type Query {
   getNotifications: [Notification!]!
   getPostById(id: String!): PostResult!
   getPostsBySoma(somaId: String!): [Post!]!
+  getPostsByUser(userId: String!): [Post!]!
   getSomaBySlug(slug: String!): SomaResult!
   getSomaFeed(cursor: String, limit: Int = 20, somaId: String!): [FeedItem!]!
   getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
+  getUserById(id: String!): UserResult!
   me: UserResult!
   userByUsername(username: String!): UserResult!
 }
 
 type Soma {
+  coverUrl: String
   createdAt: DateTime!
   description: String
   id: ID!
+  memberCount: Int!
   name: String!
   slug: String!
   updatedAt: DateTime!
+  weeklyVisitorCount: Int!
 }
 
 union SomaResult = InvalidInputError | NotFoundError | Soma
+
+enum TargetType {
+  COMMENT
+  POST
+}
 
 type UnauthorizedError {
   message: String!
@@ -232,8 +267,15 @@ input UpdatePostDto {
   title: String
 }
 
+input UpdateSomaDto {
+  coverUrl: String
+  description: String
+}
+
 input UpdateUserProfileDto {
+  avatarUrl: String
   bio: String
+  coverUrl: String
   displayName: String
 }
 
@@ -250,25 +292,26 @@ type UploadIntentResponseDto {
 }
 
 type UserResponseDto {
+  avatarUrl: String
+  awards: [String]
   bio: String
+  coverUrl: String
   createdAt: DateTime!
   displayName: String
   email: String!
   id: ID!
+  isVerified: Boolean!
   role: String!
+  stats: UserStats
   updatedAt: DateTime!
   username: String!
 }
 
 union UserResult = NotFoundError | UserResponseDto
 
-type Vote {
-  createdAt: DateTime!
-  id: ID!
-  targetId: String!
-  targetType: String!
-  userId: String!
-  value: Int!
+type UserStats {
+  comments: Int!
+  followers: Int!
+  following: Int!
+  posts: Int!
 }
-
-union VoteResult = InvalidInputError | Vote

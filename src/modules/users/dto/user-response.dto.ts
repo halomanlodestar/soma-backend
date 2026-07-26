@@ -1,4 +1,19 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+
+@ObjectType()
+export class UserStats {
+  @Field(() => Int)
+  posts: number;
+
+  @Field(() => Int)
+  comments: number;
+
+  @Field(() => Int)
+  followers: number;
+
+  @Field(() => Int)
+  following: number;
+}
 
 @ObjectType()
 export class UserResponseDto {
@@ -25,4 +40,19 @@ export class UserResponseDto {
 
   @Field(() => Date)
   updatedAt: Date;
+
+  @Field(() => String, { nullable: true })
+  avatarUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  coverUrl: string | null;
+
+  @Field(() => Boolean)
+  isVerified: boolean;
+
+  @Field(() => UserStats, { nullable: true })
+  stats?: UserStats;
+
+  @Field(() => [String], { nullable: 'itemsAndList' })
+  awards?: string[];
 }

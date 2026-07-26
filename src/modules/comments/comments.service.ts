@@ -50,8 +50,7 @@ export class CommentsService {
         userId: post.authorId,
         type: 'COMMENT',
         message: `Someone commented on your post: "${post.title}"`,
-        targetType: 'POST',
-        targetId: postId,
+        postId: postId,
       });
     }
 

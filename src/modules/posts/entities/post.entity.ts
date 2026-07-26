@@ -1,4 +1,6 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { Soma } from '../../soma/entities/soma.entity';
 
 @ObjectType()
 export class Post {
@@ -14,8 +16,26 @@ export class Post {
   @Field(() => String)
   authorId: string;
 
+  @Field(() => UserResponseDto)
+  author?: UserResponseDto;
+
   @Field(() => String)
   somaId: string;
+
+  @Field(() => Soma)
+  soma?: Soma;
+
+  @Field(() => Int, { defaultValue: 0 })
+  voteCount: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  commentCount: number;
+
+  @Field(() => String, { nullable: true })
+  excerpt?: string | null;
+
+  @Field(() => String, { nullable: true })
+  mediaUrl?: string | null;
 
   @Field(() => Int)
   impressions: number;

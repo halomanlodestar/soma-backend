@@ -1,10 +1,15 @@
 import { IsEnum, IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { InputType, Field } from '@nestjs/graphql';
-import { AwardTargetType } from '../../../prisma/generated/client';
+import { InputType, Field, registerEnumType } from '@nestjs/graphql';
+
+export enum AwardTargetType {
+  POST = 'POST',
+  COMMENT = 'COMMENT',
+}
+registerEnumType(AwardTargetType, { name: 'AwardTargetType' });
 
 @InputType()
 export class CreateAwardDto {
-  @Field(() => String)
+  @Field(() => AwardTargetType)
   @IsEnum(AwardTargetType)
   @IsNotEmpty()
   targetType: AwardTargetType;

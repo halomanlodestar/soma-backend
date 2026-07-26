@@ -1,8 +1,5 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
-import {
-  Vote as PrismaVote,
-  VoteTargetType,
-} from '../../../prisma/generated/client';
+import { Vote as PrismaVote } from '../../../prisma/generated/client';
 
 @ObjectType()
 export class Vote implements PrismaVote {
@@ -12,11 +9,11 @@ export class Vote implements PrismaVote {
   @Field(() => String)
   userId: string;
 
-  @Field(() => String)
-  targetType: VoteTargetType;
+  @Field(() => String, { nullable: true })
+  postId: string | null;
 
-  @Field(() => String)
-  targetId: string;
+  @Field(() => String, { nullable: true })
+  commentId: string | null;
 
   @Field(() => Int)
   value: number;

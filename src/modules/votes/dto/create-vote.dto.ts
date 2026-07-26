@@ -1,13 +1,19 @@
 import { IsEnum, IsInt, IsNotEmpty, IsUUID, IsIn } from 'class-validator';
-import { InputType, Field, Int } from '@nestjs/graphql';
-import { VoteTargetType } from '../../../prisma/generated/client';
+import { InputType, Field, Int, registerEnumType } from '@nestjs/graphql';
+
+export enum TargetType {
+  POST = 'POST',
+  COMMENT = 'COMMENT',
+}
+
+registerEnumType(TargetType, { name: 'TargetType' });
 
 @InputType()
 export class CreateVoteDto {
-  @Field(() => String)
-  @IsEnum(VoteTargetType)
+  @Field(() => TargetType)
+  @IsEnum(TargetType)
   @IsNotEmpty()
-  targetType: VoteTargetType;
+  targetType: TargetType;
 
   @Field(() => String)
   @IsUUID()

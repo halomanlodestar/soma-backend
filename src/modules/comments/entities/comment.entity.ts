@@ -1,4 +1,5 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { Comment as PrismaComment } from '../../../prisma/generated/client';
 
 @ObjectType()
@@ -11,6 +12,12 @@ export class Comment implements PrismaComment {
 
   @Field(() => String)
   authorId: string;
+
+  @Field(() => UserResponseDto)
+  author?: UserResponseDto;
+
+  @Field(() => Int)
+  voteCount: number;
 
   @Field(() => String)
   postId: string;

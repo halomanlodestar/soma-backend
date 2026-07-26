@@ -14,4 +14,14 @@ export class UpdateUserProfileDto {
   @IsString()
   @MaxLength(500)
   bio?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  coverUrl?: string;
 }
