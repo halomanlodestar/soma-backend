@@ -1,8 +1,10 @@
 import { SomaResultUnion } from './dto/soma-results.dto';
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { SomaService, SomaResult } from './soma.service';
+import { SomaService } from './soma.service';
+import { SomaResult } from './types/soma-result.type';
 import { CreateSomaDto } from './dto/create-soma.dto';
+import { UpdateSomaDto } from './dto/update-soma.dto';
 import { Soma as SomaEntity } from './entities/soma.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -19,6 +21,16 @@ export class SomaResolver {
     @Args('data') createSomaDto: CreateSomaDto,
   ): Promise<SomaResult> {
     return this.somaService.create(createSomaDto);
+  }
+
+  @Mutation(() => SomaResultUnion)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async updateSoma(
+    @Args('id') id: string,
+    @Args('data') updateSomaDto: UpdateSomaDto,
+  ): Promise<SomaResult> {
+    return this.somaService.update(id, updateSomaDto);
   }
 
   @Query(() => [SomaEntity])

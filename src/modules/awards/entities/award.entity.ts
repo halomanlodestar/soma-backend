@@ -1,8 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import {
-  Award as PrismaAward,
-  AwardTargetType,
-} from '../../../prisma/generated/client';
+import { Award as PrismaAward } from '../../../prisma/generated/client';
 
 @ObjectType()
 export class Award implements PrismaAward {
@@ -12,11 +9,11 @@ export class Award implements PrismaAward {
   @Field(() => String)
   awardedById: string;
 
-  @Field(() => String)
-  targetType: AwardTargetType;
+  @Field(() => String, { nullable: true })
+  postId: string | null;
 
-  @Field(() => String)
-  targetId: string;
+  @Field(() => String, { nullable: true })
+  commentId: string | null;
 
   @Field(() => String)
   name: string;

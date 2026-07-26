@@ -1,3 +1,4 @@
+import { FollowResult } from './types/follow-result.type';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, UserRole } from '../../prisma/generated/client';
@@ -10,8 +11,6 @@ import {
   FollowStatus,
   FollowUserDto,
 } from './dto/follow-responses.dto';
-
-export type FollowResult = FollowResponse | InvalidInputError | NotFoundError;
 
 @Injectable()
 export class FollowService {

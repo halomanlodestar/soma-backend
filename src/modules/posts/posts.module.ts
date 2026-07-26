@@ -1,25 +1,16 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
 import { PostsService } from './posts.service';
 import { PostsResolver } from './posts.resolver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../media/storage/storage.service';
-import { PostProcessingProcessor } from './processors/post-processing.processor';
-import { PostDeletionProcessor } from './processors/post-deletion.processor';
+import { PostsWorkerController } from './posts-worker.controller';
+import { UsersModule } from '../users/users.module';
+import { SomaModule } from '../soma/soma.module';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: 'post-processing' }),
-    BullModule.registerQueue({ name: 'post-deletion' }),
-  ],
-  providers: [
-    PostsService,
-    PostsResolver,
-    PrismaService,
-    StorageService,
-    PostProcessingProcessor,
-    PostDeletionProcessor,
-  ],
+  imports: [UsersModule, SomaModule],
+  controllers: [PostsWorkerController],
+  providers: [PostsService, PostsResolver, PrismaService, StorageService],
   exports: [PostsService],
 })
 export class PostsModule {}

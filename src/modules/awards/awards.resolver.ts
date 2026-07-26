@@ -1,7 +1,8 @@
 import { AwardResultUnion } from './dto/awards-results.dto';
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { AwardsService, AwardResult } from './awards.service';
+import { AwardsService } from './awards.service';
+import { AwardResult } from './types/award-result.type';
 import { CreateAwardDto } from './dto/create-award.dto';
 import { Award as AwardEntity } from './entities/award.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

@@ -1,12 +1,10 @@
+import { AwardResult } from './types/award-result.type';
 import { Injectable } from '@nestjs/common';
-import { CreateAwardDto } from './dto/create-award.dto';
+import { CreateAwardDto, AwardTargetType } from './dto/create-award.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AwardTargetType } from '../../prisma/generated/client';
 import { Award } from './entities/award.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { InvalidInputError } from '../../common/errors/graphql-errors';
-
-export type AwardResult = Award | InvalidInputError;
 
 @Injectable()
 export class AwardsService {
@@ -35,8 +33,8 @@ export class AwardsService {
     const award = await this.prisma.award.create({
       data: {
         awardedById: userId,
-        targetType,
-        targetId,
+        postId: targetType === AwardTargetType.POST ? targetId : null,
+        commentId: targetType === AwardTargetType.COMMENT ? targetId : null,
         name,
       },
     });
@@ -46,8 +44,9 @@ export class AwardsService {
         userId: recipientId,
         type: 'AWARD',
         message: `You received a "${name}" award!`,
-        targetType: targetType.toString(),
-        targetId: targetId,
+        postId: targetType === AwardTargetType.POST ? targetId : undefined,
+        commentId:
+          targetType === AwardTargetType.COMMENT ? targetId : undefined,
       });
     }
 
@@ -86,8 +85,7 @@ export class AwardsService {
   async findAllByPost(postId: string): Promise<Award[]> {
     return this.prisma.award.findMany({
       where: {
-        targetType: AwardTargetType.POST,
-        targetId: postId,
+        postId,
       },
       orderBy: {
         createdAt: 'desc',
@@ -98,8 +96,7 @@ export class AwardsService {
   async findAllByComment(commentId: string): Promise<Award[]> {
     return this.prisma.award.findMany({
       where: {
-        targetType: AwardTargetType.COMMENT,
-        targetId: commentId,
+        commentId,
       },
       orderBy: {
         createdAt: 'desc',

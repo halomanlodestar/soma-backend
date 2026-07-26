@@ -1,7 +1,8 @@
 import { FollowResultUnion } from './dto/follow-results.dto';
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { FollowService, FollowResult } from './follow.service';
+import { FollowService } from './follow.service';
+import { FollowResult } from './types/follow-result.type';
 import {
   FollowResponse,
   FollowStatus,

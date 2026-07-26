@@ -13,11 +13,11 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   message: string;
 
-  @IsString()
+  @IsUUID()
   @IsOptional()
-  targetType?: string;
+  postId?: string;
 
   @IsUUID()
   @IsOptional()
-  targetId?: string;
+  commentId?: string;
 }

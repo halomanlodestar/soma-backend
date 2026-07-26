@@ -2,8 +2,7 @@ import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { BullModule } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
+import { RabbitMQModule } from './modules/rabbitmq/rabbitmq.module';
 import { UsersModule } from './modules/users/users.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { SomaModule } from './modules/soma/soma.module';
@@ -30,15 +29,7 @@ import { formatError } from './common/utils/format';
       includeStacktraceInErrorResponses: false,
       formatError,
     }),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get<string>('REDIS_HOST'),
-          port: config.get<number>('REDIS_PORT'),
-        },
-      }),
-    }),
+    RabbitMQModule,
     UsersModule,
     PostsModule,
     SomaModule,

@@ -1,7 +1,18 @@
 import { PostResultUnion } from './dto/posts-results.dto';
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Args,
+  Int,
+  ResolveField,
+  Parent,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { PostsService, PostResult } from './posts.service';
+import { PostsService } from './posts.service';
+import { UsersService } from '../users/users.service';
+import { SomaService } from '../soma/soma.service';
+import { PostResult } from './types/post-result.type';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Post as PostEntity } from './entities/post.entity';
@@ -11,9 +22,34 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
 
+import { UserResponseDto } from '../users/dto/user-response.dto';
+import { Soma as SomaEntity } from '../soma/entities/soma.entity';
+
 @Resolver(() => PostEntity)
 export class PostsResolver {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly usersService: UsersService,
+    private readonly somaService: SomaService,
+  ) {}
+
+  @ResolveField(() => UserResponseDto)
+  async author(@Parent() post: PostEntity) {
+    const result = await this.usersService.findById(post.authorId);
+    if ('message' in result) {
+      throw new Error('Author not found');
+    }
+    return result;
+  }
+
+  @ResolveField(() => SomaEntity)
+  async soma(@Parent() post: PostEntity) {
+    const result = await this.somaService.findById(post.somaId);
+    if ('message' in result) {
+      throw new Error('Soma not found');
+    }
+    return result;
+  }
 
   @Mutation(() => PostResultUnion)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -38,6 +74,11 @@ export class PostsResolver {
   @Query(() => [PostEntity])
   async getPostsBySoma(@Args('somaId') somaId: string): Promise<PostEntity[]> {
     return this.postsService.findBySoma(somaId);
+  }
+
+  @Query(() => [PostEntity])
+  async getPostsByUser(@Args('userId') userId: string): Promise<PostEntity[]> {
+    return this.postsService.findByUser(userId);
   }
 
   @Query(() => PostResultUnion)

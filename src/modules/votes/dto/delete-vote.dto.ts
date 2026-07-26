@@ -1,13 +1,13 @@
 import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 import { InputType, Field } from '@nestjs/graphql';
-import { VoteTargetType } from '../../../prisma/generated/client';
+import { TargetType } from './create-vote.dto';
 
 @InputType()
 export class DeleteVoteDto {
-  @Field(() => String)
-  @IsEnum(VoteTargetType)
+  @Field(() => TargetType)
+  @IsEnum(TargetType)
   @IsNotEmpty()
-  targetType: VoteTargetType;
+  targetType: TargetType;
 
   @Field(() => String)
   @IsUUID()

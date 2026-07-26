@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+import { UserStats } from '../../users/dto/user-response.dto';
 
 @ObjectType()
 export class FeedUser {
@@ -10,6 +11,21 @@ export class FeedUser {
 
   @Field(() => String, { nullable: true })
   displayName: string | null;
+
+  @Field(() => String, { nullable: true })
+  avatarUrl?: string | null;
+
+  @Field(() => String, { nullable: true })
+  coverUrl?: string | null;
+
+  @Field(() => Boolean, { defaultValue: false })
+  isVerified: boolean;
+
+  @Field(() => UserStats, { nullable: true })
+  stats?: UserStats;
+
+  @Field(() => [String], { nullable: 'itemsAndList' })
+  awards?: string[];
 }
 
 @ObjectType()
@@ -22,6 +38,15 @@ export class FeedSoma {
 
   @Field(() => String)
   name: string;
+
+  @Field(() => Int, { defaultValue: 0 })
+  memberCount: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  weeklyVisitorCount: number;
+
+  @Field(() => String, { nullable: true })
+  coverUrl?: string | null;
 }
 
 @ObjectType()
@@ -67,4 +92,13 @@ export class FeedItem {
 
   @Field(() => Int)
   awardCount: number;
+
+  @Field(() => Int, { defaultValue: 0 })
+  commentCount: number;
+
+  @Field(() => String, { nullable: true })
+  excerpt?: string | null;
+
+  @Field(() => String, { nullable: true })
+  mediaUrl?: string | null;
 }

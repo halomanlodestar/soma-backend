@@ -22,22 +22,12 @@ enum MediaType {
   AUDIO
 }
 
-enum VoteTargetType {
-  POST
-  COMMENT
-}
-
 enum MediaQuality {
   ORIGINAL
   HIGH
   MEDIUM
   LOW
   PREVIEW
-}
-
-enum AwardTargetType {
-  POST
-  COMMENT
 }
 
 enum PostVisibility {
@@ -55,14 +45,17 @@ model User {
   username    String  @unique
   displayName String? @map("display_name")
   bio         String?
+  avatarUrl   String? @map("avatar_url")
+  coverUrl    String? @map("cover_url")
+  isVerified  Boolean @default(false) @map("is_verified")
 
   role UserRole @default(VIEWER)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  posts         Post[]
-  comments      Comment[]
+  posts         Post[]         @relation("UserPosts")
+  comments      Comment[]      @relation("UserComments")
   votes         Vote[]
   awardsGiven   Award[]        @relation("awardedBy")
   notifications Notification[]
@@ -91,6 +84,9 @@ model Soma {
   slug        String  @unique
   name        String
   description String?
+  coverUrl    String? @map("cover_url")
+  memberCount Int     @default(0) @map("member_count")
+  weeklyVisitorCount Int @default(0) @map("weekly_visitor_count")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -102,22 +98,31 @@ model Soma {
 
 model Post {
   id    String  @id @default(uuid())
-  title String
-  body  String?
+  title    String
+  body     String?
+  excerpt  String?
+  mediaUrl String? @map("media_url")
 
   authorId    String         @map("author_id")
   somaId      String         @map("soma_id")
   impressions Int            @default(0)
   visibility  PostVisibility @default(WAITING)
 
+  voteCount    Int   @default(0) @map("vote_count")
+  commentCount Int   @default(0) @map("comment_count")
+  hotScore     Float @default(0) @map("hot_score")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  author User @relation(fields: [authorId], references: [id])
-  soma   Soma @relation(fields: [somaId], references: [id])
+  author User @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  soma   Soma @relation(fields: [somaId], references: [id], onDelete: Cascade)
 
-  comments Comment[]
-  media    MediaCollection?
+  comments      Comment[]
+  media         MediaCollection?
+  votes         Vote[]
+  awards        Award[]
+  notifications Notification[]
 
   @@map("posts")
 }
@@ -130,13 +135,18 @@ model Comment {
   postId          String  @map("post_id")
   parentCommentId String? @map("parent_comment_id")
 
+  voteCount Int @default(0) @map("vote_count")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  author   User      @relation(fields: [authorId], references: [id])
-  post     Post      @relation(fields: [postId], references: [id])
-  parent   Comment?  @relation("CommentToComment", fields: [parentCommentId], references: [id])
-  children Comment[] @relation("CommentToComment")
+  author        User           @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent        Comment?       @relation("CommentToComment", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  children      Comment[]      @relation("CommentToComment")
+  votes         Vote[]
+  awards        Award[]
+  notifications Notification[]
 
   @@map("comments")
 }
@@ -145,16 +155,19 @@ model Vote {
   id     String @id @default(uuid())
   userId String @map("user_id")
 
-  targetType VoteTargetType @map("target_type")
-  targetId   String         @map("target_id")
+  postId    String? @map("post_id")
+  commentId String? @map("comment_id")
 
   value Int // +1 or -1
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, targetType, targetId], map: "votes_user_id_target_type_target_id_key")
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
   @@map("votes")
 }
 
@@ -209,15 +222,17 @@ model MediaVariant {
 model Award {
   id String @id @default(uuid())
 
-  awardedById String          @map("awarded_by_id")
-  targetType  AwardTargetType @map("target_type")
-  targetId    String          @map("target_id")
+  awardedById String  @map("awarded_by_id")
+  postId      String? @map("post_id")
+  commentId   String? @map("comment_id")
 
   name String // e.g. "Gold", "EditorPick"
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  awardedBy User @relation("awardedBy", fields: [awardedById], references: [id])
+  awardedBy User     @relation("awardedBy", fields: [awardedById], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@map("awards")
 }
@@ -229,13 +244,15 @@ model Notification {
   type    String // e.g. "COMMENT", "AWARD"
   message String
 
-  targetType String? @map("target_type") // e.g. "POST", "COMMENT"
-  targetId   String? @map("target_id")
+  postId    String? @map("post_id")
+  commentId String? @map("comment_id")
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }

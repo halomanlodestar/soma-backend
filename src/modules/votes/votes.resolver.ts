@@ -1,33 +1,31 @@
-import { VoteResultUnion } from './dto/votes-results.dto';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { VotesService, VoteResult } from './votes.service';
+import { VotesService } from './votes.service';
 import { CreateVoteDto } from './dto/create-vote.dto';
 import { DeleteVoteDto } from './dto/delete-vote.dto';
-import { Vote as VoteEntity } from './entities/vote.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
 
-@Resolver(() => VoteEntity)
+@Resolver()
 export class VotesResolver {
   constructor(private readonly votesService: VotesService) {}
 
-  @Mutation(() => VoteResultUnion)
+  @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard)
-  async upsertVote(
+  upsertVote(
     @CurrentUser() user: Express.User,
     @Args('data') createVoteDto: CreateVoteDto,
-  ): Promise<VoteResult> {
+  ): boolean {
     return this.votesService.upsert(user.id, createVoteDto);
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard)
-  async removeVote(
+  removeVote(
     @CurrentUser() user: Express.User,
     @Args('data') deleteVoteDto: DeleteVoteDto,
-  ): Promise<boolean> {
+  ): boolean {
     return this.votesService.remove(user.id, deleteVoteDto);
   }
 }
