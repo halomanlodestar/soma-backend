@@ -17,6 +17,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { Post as PostEntity } from './entities/post.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -56,7 +57,7 @@ export class PostsResolver {
   @ResolveField(() => Int, { nullable: true })
   async userVoteValue(
     @Parent() post: PostEntity,
-    @CurrentUser() user: Express.User | undefined,
+    @CurrentUser() user: Express.User | null,
   ): Promise<number | null> {
     if (!user) return null;
     return this.votesService.getUserVoteValue(user.id, post.id);
@@ -73,6 +74,7 @@ export class PostsResolver {
   }
 
   @Query(() => [PostEntity])
+  @UseGuards(OptionalJwtAuthGuard)
   async getTopPosts(
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 })
     page: number,
@@ -83,16 +85,19 @@ export class PostsResolver {
   }
 
   @Query(() => [PostEntity])
+  @UseGuards(OptionalJwtAuthGuard)
   async getPostsBySoma(@Args('somaId') somaId: string): Promise<PostEntity[]> {
     return this.postsService.findBySoma(somaId);
   }
 
   @Query(() => [PostEntity])
+  @UseGuards(OptionalJwtAuthGuard)
   async getPostsByUser(@Args('userId') userId: string): Promise<PostEntity[]> {
     return this.postsService.findByUser(userId);
   }
 
   @Query(() => PostResultUnion)
+  @UseGuards(OptionalJwtAuthGuard)
   async getPostById(@Args('id') id: string): Promise<PostResult> {
     return this.postsService.findOne(id);
   }

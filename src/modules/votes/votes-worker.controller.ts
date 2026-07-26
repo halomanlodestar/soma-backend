@@ -61,7 +61,7 @@ export class VotesWorkerController {
     }
 
     try {
-      const operations = [];
+      const operations: any[] = [];
       const aggregatesToUpdate = new Set<string>();
 
       for (const item of latestVotes.values()) {

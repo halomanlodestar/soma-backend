@@ -1,5 +1,7 @@
 import { Resolver, Query, Args, ResolveField, Parent, Int } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { Express } from 'express';
 import { VotesService } from '../votes/votes.service';
 import { FeedService } from './feed.service';
@@ -14,11 +16,13 @@ export class FeedResolver {
   ) {}
 
   @Query(() => [FeedItem])
+  @UseGuards(OptionalJwtAuthGuard)
   async getGlobalFeed(@Args() query: FeedQueryDto): Promise<FeedItem[]> {
     return this.feedService.getGlobalFeed(query);
   }
 
   @Query(() => [FeedItem])
+  @UseGuards(OptionalJwtAuthGuard)
   async getSomaFeed(
     @Args('somaId') somaId: string,
     @Args() query: FeedQueryDto,
@@ -29,7 +33,7 @@ export class FeedResolver {
   @ResolveField(() => Int, { nullable: true })
   async userVoteValue(
     @Parent() feedItem: FeedItem,
-    @CurrentUser() user: Express.User | undefined,
+    @CurrentUser() user: Express.User | null,
   ): Promise<number | null> {
     if (!user) return null;
     return this.votesService.getUserVoteValue(user.id, feedItem.id);

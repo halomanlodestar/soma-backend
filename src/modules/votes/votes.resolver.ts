@@ -13,19 +13,19 @@ export class VotesResolver {
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard)
-  upsertVote(
+  async upsertVote(
     @CurrentUser() user: Express.User,
     @Args('data') createVoteDto: CreateVoteDto,
-  ): boolean {
+  ): Promise<boolean> {
     return this.votesService.upsert(user.id, createVoteDto);
   }
 
   @Mutation(() => Boolean)
   @UseGuards(JwtAuthGuard)
-  removeVote(
+  async removeVote(
     @CurrentUser() user: Express.User,
     @Args('data') deleteVoteDto: DeleteVoteDto,
-  ): boolean {
+  ): Promise<boolean> {
     return this.votesService.remove(user.id, deleteVoteDto);
   }
 }

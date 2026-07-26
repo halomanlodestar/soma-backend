@@ -17,6 +17,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Comment as CommentEntity } from './entities/comment.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
 import { VotesService } from '../votes/votes.service';
@@ -41,7 +42,7 @@ export class CommentsResolver {
   @ResolveField(() => Int, { nullable: true })
   async userVoteValue(
     @Parent() comment: CommentEntity,
-    @CurrentUser() user: Express.User | undefined,
+    @CurrentUser() user: Express.User | null,
   ): Promise<number | null> {
     if (!user) return null;
     return this.votesService.getUserVoteValue(user.id, comment.id);
@@ -68,6 +69,7 @@ export class CommentsResolver {
   }
 
   @Query(() => [CommentEntity])
+  @UseGuards(OptionalJwtAuthGuard)
   async getCommentsByPost(
     @Args('postId') postId: string,
   ): Promise<CommentEntity[]> {
@@ -75,6 +77,7 @@ export class CommentsResolver {
   }
 
   @Query(() => [CommentEntity])
+  @UseGuards(OptionalJwtAuthGuard)
   getCommentsByUser(@Args('userId') userId: string): Promise<CommentEntity[]> {
     return this.commentsService.findAllByUser(userId);
   }
