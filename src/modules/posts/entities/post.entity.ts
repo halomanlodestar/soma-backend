@@ -45,4 +45,7 @@ export class Post {
 
   @Field(() => Date)
   updatedAt: Date;
+
+  @Field(() => Int, { nullable: true })
+  userVoteValue?: number;
 }

@@ -6,6 +6,7 @@ import {
   Args,
   ResolveField,
   Parent,
+  Int,
 } from '@nestjs/graphql';
 import { UsersService } from '../users/users.service';
 import { UserResponseDto } from '../users/dto/user-response.dto';
@@ -18,12 +19,14 @@ import { Comment as CommentEntity } from './entities/comment.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
+import { VotesService } from '../votes/votes.service';
 
 @Resolver(() => CommentEntity)
 export class CommentsResolver {
   constructor(
     private readonly commentsService: CommentsService,
     private readonly usersService: UsersService,
+    private readonly votesService: VotesService,
   ) {}
 
   @ResolveField(() => UserResponseDto)
@@ -33,6 +36,15 @@ export class CommentsResolver {
       throw new Error('Author not found');
     }
     return result;
+  }
+
+  @ResolveField(() => Int, { nullable: true })
+  async userVoteValue(
+    @Parent() comment: CommentEntity,
+    @CurrentUser() user: Express.User | undefined,
+  ): Promise<number | null> {
+    if (!user) return null;
+    return this.votesService.getUserVoteValue(user.id, comment.id);
   }
 
   @Mutation(() => CommentResultUnion)

@@ -27,6 +27,7 @@ type Comment {
   parentCommentId: String
   postId: String!
   updatedAt: DateTime!
+  userVoteValue: Int
   voteCount: Int!
 }
 
@@ -88,6 +89,7 @@ type FeedItem {
   mediaUrl: String
   soma: FeedSoma!
   title: String!
+  userVoteValue: Int
   voteCount: Int!
 }
 
@@ -208,6 +210,7 @@ type Post {
   somaId: String!
   title: String!
   updatedAt: DateTime!
+  userVoteValue: Int
   voteCount: Int!
 }
 

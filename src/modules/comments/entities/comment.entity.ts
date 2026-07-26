@@ -30,4 +30,7 @@ export class Comment implements PrismaComment {
 
   @Field(() => Date)
   updatedAt: Date;
+
+  @Field(() => Int, { nullable: true })
+  userVoteValue?: number;
 }

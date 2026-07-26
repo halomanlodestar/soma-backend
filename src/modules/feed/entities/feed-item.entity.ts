@@ -101,4 +101,7 @@ export class FeedItem {
 
   @Field(() => String, { nullable: true })
   mediaUrl?: string | null;
+
+  @Field(() => Int, { nullable: true })
+  userVoteValue?: number;
 }

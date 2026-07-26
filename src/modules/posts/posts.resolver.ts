@@ -24,6 +24,7 @@ import type { Express } from 'express';
 
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { Soma as SomaEntity } from '../soma/entities/soma.entity';
+import { VotesService } from '../votes/votes.service';
 
 @Resolver(() => PostEntity)
 export class PostsResolver {
@@ -31,6 +32,7 @@ export class PostsResolver {
     private readonly postsService: PostsService,
     private readonly usersService: UsersService,
     private readonly somaService: SomaService,
+    private readonly votesService: VotesService,
   ) {}
 
   @ResolveField(() => UserResponseDto)
@@ -49,6 +51,15 @@ export class PostsResolver {
       throw new Error('Soma not found');
     }
     return result;
+  }
+
+  @ResolveField(() => Int, { nullable: true })
+  async userVoteValue(
+    @Parent() post: PostEntity,
+    @CurrentUser() user: Express.User | undefined,
+  ): Promise<number | null> {
+    if (!user) return null;
+    return this.votesService.getUserVoteValue(user.id, post.id);
   }
 
   @Mutation(() => PostResultUnion)
