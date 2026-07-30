@@ -9,12 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomBytes } from 'crypto';
-
-export interface PresignedUploadResult {
-  presignedUploadUrl: string;
-  finalPublicUrl: string;
-  key: string;
-}
+import type { PresignedUploadResult } from '../types/media.types';
 
 @Injectable()
 export class StorageService {

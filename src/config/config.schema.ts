@@ -10,7 +10,9 @@ export const configSchema = z.object({
   JWT_SECRET: z
     .string()
     .min(16, 'JWT_SECRET must be at least 16 characters long'),
-  JWT_EXPIRATION: z.string().optional().default('7d'),
+  REFRESH_TOKEN_HMAC_SECRET: z
+    .string()
+    .min(32, 'REFRESH_TOKEN_HMAC_SECRET must be at least 32 characters long'),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_CALLBACK_URL: z.string(),

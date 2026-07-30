@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AUTH_TOKEN_LIFETIMES } from '../../config/auth-token.constants';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.getOrThrow<number>('JWT_EXPIRATION'),
+          expiresIn: AUTH_TOKEN_LIFETIMES.accessTokenSeconds,
         },
       }),
       inject: [ConfigService],
