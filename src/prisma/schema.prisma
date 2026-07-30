@@ -46,7 +46,7 @@ enum PostVisibility {
 // MODELS
 
 model User {
-  id          String  @id @default(uuid())
+  id          String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
   email       String  @unique
   username    String  @unique
   displayName String? @map("display_name")
@@ -74,8 +74,8 @@ model User {
 }
 
 model AuthSession {
-  id                    String         @id @default(uuid())
-  userId                String         @map("user_id")
+  id                    String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId                String         @map("user_id") @db.Uuid
   refreshTokenHash      String         @unique @map("refresh_token_hash")
   clientType            AuthClientType @map("client_type")
   deviceName            String?        @map("device_name")
@@ -96,8 +96,8 @@ model AuthSession {
 }
 
 model RefreshTokenHistory {
-  id        String   @id @default(uuid())
-  sessionId String   @map("session_id")
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
   tokenHash String   @unique @map("token_hash")
   usedAt    DateTime @default(now()) @map("used_at")
   expiresAt DateTime @map("expires_at")
@@ -110,9 +110,9 @@ model RefreshTokenHistory {
 }
 
 model Follow {
-  id          String   @id @default(uuid())
-  followerId  String   @map("follower_id")
-  followingId String   @map("following_id")
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
   follower  User @relation("UserFollowing", fields: [followerId], references: [id])
@@ -123,7 +123,7 @@ model Follow {
 }
 
 model Soma {
-  id                 String  @id @default(uuid())
+  id                 String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
   slug               String  @unique
   name               String
   description        String?
@@ -140,14 +140,14 @@ model Soma {
 }
 
 model Post {
-  id       String  @id @default(uuid())
+  id       String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
   title    String
   body     String?
   excerpt  String?
   mediaUrl String? @map("media_url")
 
-  authorId    String         @map("author_id")
-  somaId      String         @map("soma_id")
+  authorId    String         @map("author_id") @db.Uuid
+  somaId      String         @map("soma_id") @db.Uuid
   impressions Int            @default(0)
   visibility  PostVisibility @default(WAITING)
 
@@ -171,12 +171,12 @@ model Post {
 }
 
 model Comment {
-  id      String @id @default(uuid())
+  id      String @id @default(dbgenerated("uuidv7()")) @db.Uuid
   content String
 
-  authorId        String  @map("author_id")
-  postId          String  @map("post_id")
-  parentCommentId String? @map("parent_comment_id")
+  authorId        String  @map("author_id") @db.Uuid
+  postId          String  @map("post_id") @db.Uuid
+  parentCommentId String? @map("parent_comment_id") @db.Uuid
 
   voteCount Int @default(0) @map("vote_count")
 
@@ -195,11 +195,11 @@ model Comment {
 }
 
 model Vote {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
 
-  postId    String? @map("post_id")
-  commentId String? @map("comment_id")
+  postId    String? @map("post_id") @db.Uuid
+  commentId String? @map("comment_id") @db.Uuid
 
   value Int // +1 or -1
 
@@ -215,8 +215,8 @@ model Vote {
 }
 
 model MediaCollection {
-  id     String @id @default(uuid())
-  postId String @unique(map: "media_collections_post_id_key") @map("post_id")
+  id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId String @unique(map: "media_collections_post_id_key") @map("post_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -227,8 +227,8 @@ model MediaCollection {
 }
 
 model MediaItem {
-  id           String @id @default(uuid())
-  collectionId String @map("collection_id")
+  id           String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId String @map("collection_id") @db.Uuid
 
   type        MediaType
   originalUrl String    @map("original_url")
@@ -244,8 +244,8 @@ model MediaItem {
 }
 
 model MediaVariant {
-  id          String @id @default(uuid())
-  mediaItemId String @map("media_item_id")
+  id          String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  mediaItemId String @map("media_item_id") @db.Uuid
 
   quality MediaQuality
   url     String
@@ -263,11 +263,11 @@ model MediaVariant {
 }
 
 model Award {
-  id String @id @default(uuid())
+  id String @id @default(dbgenerated("uuidv7()")) @db.Uuid
 
-  awardedById String  @map("awarded_by_id")
-  postId      String? @map("post_id")
-  commentId   String? @map("comment_id")
+  awardedById String  @map("awarded_by_id") @db.Uuid
+  postId      String? @map("post_id") @db.Uuid
+  commentId   String? @map("comment_id") @db.Uuid
 
   name String // e.g. "Gold", "EditorPick"
 
@@ -281,14 +281,14 @@ model Award {
 }
 
 model Notification {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
 
   type    String // e.g. "COMMENT", "AWARD"
   message String
 
-  postId    String? @map("post_id")
-  commentId String? @map("comment_id")
+  postId    String? @map("post_id") @db.Uuid
+  commentId String? @map("comment_id") @db.Uuid
 
   readAt    DateTime? @map("read_at")
   createdAt DateTime  @default(now()) @map("created_at")
