@@ -196,6 +196,60 @@ export class AuthService {
     };
   }
 
+  async listActiveSessions(userId: string) {
+    const now = new Date();
+    return this.prisma.authSession.findMany({
+      where: { userId, revokedAt: null, expiresAt: { gt: now } },
+      orderBy: { lastUsedAt: 'desc' },
+      select: {
+        id: true,
+        clientType: true,
+        deviceName: true,
+        userAgent: true,
+        createdAt: true,
+        lastUsedAt: true,
+        expiresAt: true,
+      },
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string): Promise<boolean> {
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const revoked = await tx.authSession.updateMany({
+        where: { id: sessionId, userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      if (revoked.count === 0) return false;
+      await tx.refreshToken.updateMany({
+        where: { sessionId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      return true;
+    });
+  }
+
+  async revokeAllSessions(userId: string): Promise<number> {
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const sessions = await tx.authSession.findMany({
+        where: { userId, revokedAt: null },
+        select: { id: true },
+      });
+      if (sessions.length === 0) return 0;
+      const sessionIds = sessions.map((session) => session.id);
+      await tx.authSession.updateMany({
+        where: { id: { in: sessionIds } },
+        data: { revokedAt: now },
+      });
+      await tx.refreshToken.updateMany({
+        where: { sessionId: { in: sessionIds }, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      return sessionIds.length;
+    });
+  }
+
   private async createAccessToken(user: LoginUser, sessionId: string) {
     return this.jwtService.signAsync({
       sub: user.id,
