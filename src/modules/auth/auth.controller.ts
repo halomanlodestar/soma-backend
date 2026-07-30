@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Req,
   UseGuards,
   UnauthorizedException,
@@ -10,6 +12,7 @@ import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Res } from '@nestjs/common';
+import { AuthTokenDto } from './dto/auth-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,12 +34,28 @@ export class AuthController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const { accessToken } = await this.authService.login(req.user);
+    const handoffCode = await this.authService.createHandoff(req.user as any);
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
     return res.redirect(
-      `${frontendUrl}/auth/callback?accessToken=${accessToken}`,
+      `${frontendUrl}/api/auth/callback?code=${encodeURIComponent(handoffCode)}`,
     );
+  }
+
+  @Post('exchange')
+  exchange(@Body() body: AuthTokenDto) {
+    return this.authService.exchangeHandoff(body.token);
+  }
+
+  @Post('refresh')
+  refresh(@Body() body: AuthTokenDto) {
+    return this.authService.refresh(body.token);
+  }
+
+  @Post('logout')
+  async logout(@Body() body: AuthTokenDto) {
+    await this.authService.logout(body.token);
+    return { success: true };
   }
 }

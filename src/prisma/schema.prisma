@@ -66,11 +66,26 @@ model User {
   awardsGiven   Award[]        @relation("awardedBy")
   notifications Notification[]
   authSessions  AuthSession[]
+  authHandoffs  AuthHandoff[]
 
   followers Follow[] @relation("UserFollowers")
   following Follow[] @relation("UserFollowing")
 
   @@map("users")
+}
+
+model AuthHandoff {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("auth_handoffs")
 }
 
 model AuthSession {

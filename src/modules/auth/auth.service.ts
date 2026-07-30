@@ -196,6 +196,67 @@ export class AuthService {
     };
   }
 
+  async createHandoff(user: LoginUser): Promise<string> {
+    const code = this.createRefreshToken();
+
+    await this.prisma.authHandoff.create({
+      data: {
+        userId: user.id,
+        codeHash: this.hashRefreshToken(code),
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    return code;
+  }
+
+  async exchangeHandoff(code: string): Promise<LoginResponseDto> {
+    const now = new Date();
+    const handoff = await this.prisma.authHandoff.findUnique({
+      where: { codeHash: this.hashRefreshToken(code) },
+      include: { user: true },
+    });
+
+    if (!handoff || handoff.usedAt || handoff.expiresAt <= now) {
+      throw new UnauthorizedException(
+        'Invalid or expired authentication handoff',
+      );
+    }
+
+    const consumed = await this.prisma.authHandoff.updateMany({
+      where: { id: handoff.id, usedAt: null },
+      data: { usedAt: now },
+    });
+
+    if (consumed.count !== 1) {
+      throw new UnauthorizedException('Authentication handoff already used');
+    }
+
+    return this.login(handoff.user);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    const token = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash: this.hashRefreshToken(refreshToken) },
+      select: { sessionId: true },
+    });
+
+    if (!token) return;
+
+    const now = new Date();
+
+    await this.prisma.$transaction([
+      this.prisma.authSession.updateMany({
+        where: { id: token.sessionId, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { sessionId: token.sessionId, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+    ]);
+  }
+
   async listActiveSessions(userId: string) {
     const now = new Date();
     return this.prisma.authSession.findMany({
@@ -215,29 +276,37 @@ export class AuthService {
 
   async revokeSession(userId: string, sessionId: string): Promise<boolean> {
     const now = new Date();
+
     return this.prisma.$transaction(async (tx) => {
       const revoked = await tx.authSession.updateMany({
         where: { id: sessionId, userId, revokedAt: null },
         data: { revokedAt: now },
       });
+
       if (revoked.count === 0) return false;
+
       await tx.refreshToken.updateMany({
         where: { sessionId, revokedAt: null },
         data: { revokedAt: now },
       });
+
       return true;
     });
   }
 
   async revokeAllSessions(userId: string): Promise<number> {
     const now = new Date();
+
     return this.prisma.$transaction(async (tx) => {
       const sessions = await tx.authSession.findMany({
         where: { userId, revokedAt: null },
         select: { id: true },
       });
+
       if (sessions.length === 0) return 0;
+
       const sessionIds = sessions.map((session) => session.id);
+
       await tx.authSession.updateMany({
         where: { id: { in: sessionIds } },
         data: { revokedAt: now },
@@ -246,6 +315,7 @@ export class AuthService {
         where: { sessionId: { in: sessionIds }, revokedAt: null },
         data: { revokedAt: now },
       });
+
       return sessionIds.length;
     });
   }
@@ -276,12 +346,15 @@ export class AuthService {
       now,
       AUTH_TOKEN_LIFETIMES.refreshTokenDays,
     );
+
     return rollingExpiry < sessionExpiresAt ? rollingExpiry : sessionExpiresAt;
   }
 
   private addDays(date: Date, days: number): Date {
     const result = new Date(date);
+
     result.setUTCDate(result.getUTCDate() + days);
+
     return result;
   }
 
