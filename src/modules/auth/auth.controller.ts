@@ -12,7 +12,7 @@ import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Res } from '@nestjs/common';
-import { AuthTokenDto } from './dto/auth-token.dto';
+import { AuthHandoffExchangeDto, RefreshTokenDto } from './dto/auth-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -44,18 +44,18 @@ export class AuthController {
   }
 
   @Post('exchange')
-  exchange(@Body() body: AuthTokenDto) {
-    return this.authService.exchangeHandoff(body.token);
+  exchange(@Body() body: AuthHandoffExchangeDto) {
+    return this.authService.exchangeHandoff(body.handoffCode);
   }
 
   @Post('refresh')
-  refresh(@Body() body: AuthTokenDto) {
-    return this.authService.refresh(body.token);
+  refresh(@Body() body: RefreshTokenDto) {
+    return this.authService.refresh(body.refreshToken);
   }
 
   @Post('logout')
-  async logout(@Body() body: AuthTokenDto) {
-    await this.authService.logout(body.token);
+  async logout(@Body() body: RefreshTokenDto) {
+    await this.authService.logout(body.refreshToken);
     return { success: true };
   }
 }

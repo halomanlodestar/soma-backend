@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHmac, randomBytes } from 'node:crypto';
@@ -14,6 +14,7 @@ import type {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -81,6 +82,7 @@ export class AuthService {
     });
 
     const accessToken = await this.createAccessToken(user, session.id);
+    this.logger.log(`Session created: user=${user.id} session=${session.id}`);
 
     return {
       accessToken,
@@ -175,6 +177,7 @@ export class AuthService {
     });
 
     if (result.status === 'reused') {
+      this.logger.warn('Refresh token replay detected; session revoked');
       throw new UnauthorizedException('Refresh token reuse detected');
     }
     if (result.status === 'invalid') {
@@ -255,6 +258,8 @@ export class AuthService {
         data: { revokedAt: now },
       }),
     ]);
+
+    this.logger.log(`Session logged out: session=${token.sessionId}`);
   }
 
   async listActiveSessions(userId: string) {
@@ -318,6 +323,19 @@ export class AuthService {
 
       return sessionIds.length;
     });
+  }
+
+  async cleanupExpiredCredentials(): Promise<void> {
+    const now = new Date();
+
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.deleteMany({
+        where: { expiresAt: { lte: now } },
+      }),
+      this.prisma.authHandoff.deleteMany({
+        where: { expiresAt: { lte: now } },
+      }),
+    ]);
   }
 
   private async createAccessToken(user: LoginUser, sessionId: string) {
