@@ -20,6 +20,7 @@ import { FollowModule } from './modules/follow/follow.module';
 import { LoggingPlugin } from './common/plugins/logging.plugin';
 import { formatError } from './common/utils/format';
 import { ConfigService } from '@nestjs/config';
+
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
