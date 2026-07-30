@@ -34,7 +34,7 @@ export class AuthController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    const handoffCode = await this.authService.createHandoff(req.user as any);
+    const handoffCode = await this.authService.createHandoff(req.user);
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
