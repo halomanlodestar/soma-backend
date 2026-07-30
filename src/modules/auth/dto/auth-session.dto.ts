@@ -16,10 +16,10 @@ export class AuthSessionDto {
   @Field(() => AuthSessionClientType)
   clientType: AuthSessionClientType;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   deviceName?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   userAgent?: string | null;
 
   @Field(() => Date)

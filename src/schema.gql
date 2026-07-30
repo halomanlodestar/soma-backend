@@ -2,6 +2,22 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+enum AuthSessionClientType {
+  ANDROID
+  IOS
+  WEB
+}
+
+type AuthSessionDto {
+  clientType: AuthSessionClientType!
+  createdAt: DateTime!
+  deviceName: String
+  expiresAt: DateTime!
+  id: ID!
+  lastUsedAt: DateTime!
+  userAgent: String
+}
+
 type Award {
   awardedById: String!
   commentId: String
@@ -171,6 +187,8 @@ type Mutation {
   markNotificationAsRead(id: String!): NotificationResult!
   removeVote(data: DeleteVoteDto!): Boolean!
   replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
+  revokeAllSessions: Float!
+  revokeSession(sessionId: String!): Boolean!
   unfollow(userId: String!): FollowResponse!
   updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
@@ -236,6 +254,7 @@ type Query {
   getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
   getUserById(id: String!): UserResult!
   me: UserResult!
+  mySessions: [AuthSessionDto!]!
   userByUsername(username: String!): UserResult!
 }
 
