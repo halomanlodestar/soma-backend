@@ -1,6 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { createHmac, randomBytes } from 'node:crypto';
 import { AUTH_TOKEN_LIFETIMES } from '../../config/auth-token.constants';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -325,6 +326,7 @@ export class AuthService {
     });
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupExpiredCredentials(): Promise<void> {
     const now = new Date();
 
@@ -336,6 +338,10 @@ export class AuthService {
         where: { expiresAt: { lte: now } },
       }),
     ]);
+
+    this.logger.log(
+      'Expired refresh tokens and authentication handoffs cleaned up',
+    );
   }
 
   private async createAccessToken(user: LoginUser, sessionId: string) {

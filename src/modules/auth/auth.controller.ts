@@ -7,6 +7,7 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from '../../common/guards/google-auth.guard';
 import type { Request, Response } from 'express';
@@ -22,12 +23,14 @@ export class AuthController {
   ) {}
 
   @Get('google')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @UseGuards(GoogleAuthGuard)
   googleAuth() {
     // Guard redirects to Google OAuth - no implementation needed
   }
 
   @Get('google/callback')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @UseGuards(GoogleAuthGuard)
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     if (!req.user) {
@@ -44,16 +47,19 @@ export class AuthController {
   }
 
   @Post('exchange')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   exchange(@Body() body: AuthHandoffExchangeDto) {
     return this.authService.exchangeHandoff(body.handoffCode);
   }
 
   @Post('refresh')
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   refresh(@Body() body: RefreshTokenDto) {
     return this.authService.refresh(body.refreshToken);
   }
 
   @Post('logout')
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   async logout(@Body() body: RefreshTokenDto) {
     await this.authService.logout(body.refreshToken);
     return { success: true };

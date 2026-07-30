@@ -20,6 +20,8 @@ import { FollowModule } from './modules/follow/follow.module';
 import { LoggingPlugin } from './common/plugins/logging.plugin';
 import { formatError } from './common/utils/format';
 import { ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { ConfigService } from '@nestjs/config';
       includeStacktraceInErrorResponses: false,
       formatError,
     }),
+    ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     RedisModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
