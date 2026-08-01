@@ -7,6 +7,12 @@ import { CollectionsService } from './collections.service';
 import { Post } from '../posts/entities/post.entity';
 import { Collection } from './entities/collection.entity';
 import { CollectionItem } from './entities/collection-item.entity';
+import {
+  CreateCollectionInput,
+  UpdateCollectionInput,
+  CollectionPostInput,
+  ReorderCollectionItemsInput,
+} from './dto/collection.inputs';
 
 @Resolver()
 export class CollectionsResolver {
@@ -49,11 +55,33 @@ export class CollectionsResolver {
   @UseGuards(JwtAuthGuard)
   createCollection(
     @CurrentUser() user: Express.User,
-    @Args('title') title: string,
-    @Args('description', { nullable: true }) description?: string,
-    @Args('isPublic', { nullable: true }) isPublic?: boolean,
+    @Args('input') input: CreateCollectionInput,
   ) {
-    return this.service.createCollection(user.id, title, description, isPublic);
+    return this.service.createCollection(
+      user.id,
+      input.title,
+      input.description,
+      input.isPublic,
+    );
+  }
+
+  @Mutation(() => Collection, { nullable: true })
+  @UseGuards(JwtAuthGuard)
+  updateCollection(
+    @CurrentUser() user: Express.User,
+    @Args('input') input: UpdateCollectionInput,
+  ) {
+    const { collectionId, ...data } = input;
+    return this.service.updateCollection(user.id, collectionId, data);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtAuthGuard)
+  deleteCollection(
+    @CurrentUser() user: Express.User,
+    @Args('collectionId') collectionId: string,
+  ) {
+    return this.service.deleteCollection(user.id, collectionId);
   }
 
   @Query(() => [Collection])
@@ -66,10 +94,27 @@ export class CollectionsResolver {
   @UseGuards(JwtAuthGuard)
   addPostToCollection(
     @CurrentUser() user: Express.User,
-    @Args('collectionId') collectionId: string,
-    @Args('postId') postId: string,
+    @Args('input') input: CollectionPostInput,
   ) {
-    return this.service.addPost(user.id, collectionId, postId);
+    return this.service.addPost(user.id, input.collectionId, input.postId);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtAuthGuard)
+  removePostFromCollection(
+    @CurrentUser() user: Express.User,
+    @Args('input') input: CollectionPostInput,
+  ) {
+    return this.service.removePost(user.id, input.collectionId, input.postId);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtAuthGuard)
+  reorderCollectionItems(
+    @CurrentUser() user: Express.User,
+    @Args('input') input: ReorderCollectionItemsInput,
+  ) {
+    return this.service.reorder(user.id, input.collectionId, input.postIds);
   }
 
   @Query(() => [CollectionItem], { nullable: true })

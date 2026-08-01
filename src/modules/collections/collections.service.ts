@@ -59,6 +59,31 @@ export class CollectionsService {
     });
   }
 
+  async updateCollection(
+    userId: string,
+    collectionId: string,
+    data: { title?: string; description?: string; isPublic?: boolean },
+  ) {
+    const result = await this.prisma.collection.updateMany({
+      where: { id: collectionId, userId },
+      data,
+    });
+
+    return result.count > 0
+      ? this.prisma.collection.findUnique({ where: { id: collectionId } })
+      : null;
+  }
+
+  async deleteCollection(userId: string, collectionId: string) {
+    return (
+      (
+        await this.prisma.collection.deleteMany({
+          where: { id: collectionId, userId },
+        })
+      ).count > 0
+    );
+  }
+
   async addPost(userId: string, collectionId: string, postId: string) {
     const collection = await this.prisma.collection.findFirst({
       where: { id: collectionId, userId },
@@ -92,7 +117,46 @@ export class CollectionsService {
 
     return this.prisma.collectionItem.findMany({
       where: { collectionId, post: { visibility: 'PUBLISHED' } },
+      include: { post: true },
       orderBy: { position: 'asc' },
     });
+  }
+
+  async removePost(userId: string, collectionId: string, postId: string) {
+    const collection = await this.prisma.collection.findFirst({
+      where: { id: collectionId, userId },
+      select: { id: true },
+    });
+
+    if (!collection) return false;
+
+    await this.prisma.collectionItem.deleteMany({
+      where: { collectionId, postId },
+    });
+
+    return true;
+  }
+
+  async reorder(userId: string, collectionId: string, postIds: string[]) {
+    const items = await this.collectionItems(userId, collectionId);
+
+    if (
+      !items ||
+      new Set(postIds).size !== postIds.length ||
+      items.length !== postIds.length ||
+      !items.every((item) => postIds.includes(item.postId))
+    )
+      return false;
+
+    await this.prisma.$transaction(
+      postIds.map((postId, position) =>
+        this.prisma.collectionItem.update({
+          where: { collectionId_postId: { collectionId, postId } },
+          data: { position },
+        }),
+      ),
+    );
+
+    return true;
   }
 }

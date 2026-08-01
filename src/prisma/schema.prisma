@@ -244,6 +244,7 @@ model Post {
   savedBy       SavedPost[]
   collectionItems CollectionItem[]
 
+  @@index([visibility, hotScore, id])
   @@map("posts")
 }
 

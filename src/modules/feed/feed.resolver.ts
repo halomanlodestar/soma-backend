@@ -13,7 +13,9 @@ import type { Express } from 'express';
 import { VotesService } from '../votes/votes.service';
 import { FeedService } from './feed.service';
 import { FeedQueryDto } from './dto/feed-query.dto';
+import { FeedConnectionQueryDto } from './dto/feed-connection-query.dto';
 import { FeedItem } from './entities/feed-item.entity';
+import { FeedConnection } from './entities/feed-connection.entity';
 
 @Resolver(() => FeedItem)
 export class FeedResolver {
@@ -35,6 +37,23 @@ export class FeedResolver {
     @Args() query: FeedQueryDto,
   ): Promise<FeedItem[]> {
     return this.feedService.getSomaFeed(somaId, query);
+  }
+
+  @Query(() => FeedConnection)
+  @UseGuards(OptionalJwtAuthGuard)
+  globalFeedConnection(
+    @Args() query: FeedConnectionQueryDto,
+  ): Promise<FeedConnection> {
+    return this.feedService.getGlobalFeedConnection(query);
+  }
+
+  @Query(() => FeedConnection)
+  @UseGuards(OptionalJwtAuthGuard)
+  somaFeedConnection(
+    @Args('somaId') somaId: string,
+    @Args() query: FeedConnectionQueryDto,
+  ): Promise<FeedConnection> {
+    return this.feedService.getSomaFeedConnection(somaId, query);
   }
 
   @ResolveField(() => Int, { nullable: true })
