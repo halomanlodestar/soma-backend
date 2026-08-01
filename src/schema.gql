@@ -34,6 +34,19 @@ enum AwardTargetType {
   POST
 }
 
+type Collection {
+  description: String
+  id: ID!
+  isPublic: Boolean!
+  title: String!
+}
+
+type CollectionItem {
+  id: ID!
+  position: Float!
+  postId: String!
+}
+
 type Comment {
   author: UserResponseDto!
   authorId: String!
@@ -183,7 +196,9 @@ enum MediaProcessingStatus {
 }
 
 type Mutation {
+  addPostToCollection(collectionId: String!, postId: String!): CollectionItem
   createAward(data: CreateAwardDto!): AwardResult!
+  createCollection(description: String, isPublic: Boolean, title: String!): Collection!
   createComment(data: CreateCommentDto!, postId: String!): CommentResult!
   createPost(data: CreatePostDto!): PostResult!
   createSoma(data: CreateSomaDto!): SomaResult!
@@ -200,11 +215,13 @@ type Mutation {
   reviewSomaJoinRequest(input: ReviewSomaJoinRequestInput!): SomaMembership!
   revokeAllSessions: Float!
   revokeSession(sessionId: String!): Boolean!
+  savePost(postId: String!): Boolean!
   setSomaMembershipRole(input: SetSomaMembershipRoleInput!): SomaMembership!
   setSomaMembershipStatus(input: SetSomaMembershipStatusInput!): SomaMembership!
   submitPost(id: String!): PostResult!
   submitSomaCreatorApplication(input: SubmitSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   unfollow(userId: String!): FollowResponse!
+  unsavePost(postId: String!): Boolean!
   updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
   updatePost(data: UpdatePostDto!, id: String!): PostResult!
@@ -263,6 +280,7 @@ enum PostVisibility {
 }
 
 type Query {
+  collectionItems(collectionId: String!): [CollectionItem!]
   getAllSomas: [Soma!]!
   getAwardsByComment(commentId: String!): [Award!]!
   getAwardsByPost(postId: String!): [Award!]!
@@ -281,7 +299,10 @@ type Query {
   getSomaFeed(cursor: String, limit: Int = 20, somaId: String!): [FeedItem!]!
   getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
   getUserById(id: String!): UserResult!
+  isPostSaved(postId: String!): Boolean!
   me: UserResult!
+  myCollections: [Collection!]!
+  mySavedPosts: [Post!]!
   mySessions: [AuthSessionDto!]!
   mySomaCreatorApplication(somaId: String!): SomaCreatorApplication
   mySomaCreatorApplications: [SomaCreatorApplication!]!

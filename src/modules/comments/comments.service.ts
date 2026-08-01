@@ -10,12 +10,7 @@ import {
   InvalidInputError,
   BaseError,
 } from '../../common/errors/graphql-errors';
-
-export type CommentResult =
-  | Comment
-  | NotFoundError
-  | UnauthorizedError
-  | InvalidInputError;
+import { CommentResult } from './types/comment-result.type';
 
 @Injectable()
 export class CommentsService {

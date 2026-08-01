@@ -3,17 +3,12 @@ import { EventPattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TargetType } from './dto/create-vote.dto';
 import type { VoteEvent } from './types/vote-events.type';
-
-interface BatchItem {
-  event: VoteEvent;
-  type: 'cast' | 'remove';
-  context: RmqContext;
-}
+import type { VoteBatchItem } from './types/vote-batch-item.type';
 
 @Controller()
 export class VotesWorkerController {
   private readonly logger = new Logger(VotesWorkerController.name);
-  private batch: BatchItem[] = [];
+  private batch: VoteBatchItem[] = [];
   private flushTimeout: NodeJS.Timeout | null = null;
   private readonly BATCH_SIZE = 500;
   private readonly FLUSH_INTERVAL_MS = 5000;
@@ -30,7 +25,7 @@ export class VotesWorkerController {
     this.addToBatch({ event: data, type: 'remove', context });
   }
 
-  private addToBatch(item: BatchItem) {
+  private addToBatch(item: VoteBatchItem) {
     this.batch.push(item);
     
     if (this.batch.length >= this.BATCH_SIZE) {
@@ -52,7 +47,7 @@ export class VotesWorkerController {
     const itemsToProcess = [...this.batch];
     this.batch = [];
 
-    const latestVotes = new Map<string, BatchItem>();
+    const latestVotes = new Map<string, VoteBatchItem>();
     
     // De-duplicate votes for the same user and target
     for (const item of itemsToProcess) {

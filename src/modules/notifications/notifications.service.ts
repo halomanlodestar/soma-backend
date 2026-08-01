@@ -6,11 +6,7 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '../../common/errors/graphql-errors';
-
-export type NotificationResult =
-  | Notification
-  | NotFoundError
-  | UnauthorizedError;
+import { NotificationResult } from './types/notification-result.type';
 
 @Injectable()
 export class NotificationsService {

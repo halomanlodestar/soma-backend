@@ -122,6 +122,8 @@ model User {
   approvedSomaMemberships SomaMembership[]         @relation("SomaMembershipApprover")
   somaApplications        SomaCreatorApplication[] @relation("SomaApplicationApplicant")
   reviewedSomaApplications SomaCreatorApplication[] @relation("SomaApplicationReviewer")
+  savedPosts              SavedPost[]
+  collections             Collection[]
 
   @@map("users")
 }
@@ -239,8 +241,55 @@ model Post {
   votes         Vote[]
   awards        Award[]
   notifications Notification[]
+  savedBy       SavedPost[]
+  collectionItems CollectionItem[]
 
   @@map("posts")
+}
+
+model SavedPost {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+  @@map("saved_posts")
+}
+
+model Collection {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  title       String
+  description String?
+  isPublic    Boolean  @default(false) @map("is_public")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CollectionItem[]
+
+  @@index([userId, updatedAt])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId String   @map("collection_id") @db.Uuid
+  postId       String   @map("post_id") @db.Uuid
+  position     Int
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  post       Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, postId])
+  @@index([collectionId, position])
+  @@map("collection_items")
 }
 
 model SomaMembership {

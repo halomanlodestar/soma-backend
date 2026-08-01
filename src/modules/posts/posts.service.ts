@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Post } from './entities/post.entity';
 import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
 import { PostVisibility } from '../../prisma/generated/client';
 import { StorageService } from '../media/storage/storage.service';
@@ -14,12 +13,8 @@ import {
   UnauthorizedError,
   InvalidInputError,
 } from '../../common/errors/graphql-errors';
-
-export type PostResult =
-  | Post
-  | NotFoundError
-  | UnauthorizedError
-  | InvalidInputError;
+import { PostResult } from './types/post-result.type';
+import { Post } from './entities/post.entity';
 
 @Injectable()
 export class PostsService {

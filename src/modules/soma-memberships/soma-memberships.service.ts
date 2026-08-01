@@ -18,11 +18,7 @@ import { SetSomaMembershipRoleInput } from './dto/set-soma-membership-role.input
 import { SetSomaMembershipStatusInput } from './dto/set-soma-membership-status.input';
 import { ReviewSomaJoinRequestInput } from './dto/review-soma-join-request.input';
 
-export type SomaCreatorApplicationResult =
-  | SomaCreatorApplication
-  | InvalidInputError
-  | NotFoundError
-  | UnauthorizedError;
+import { SomaCreatorApplicationResult } from './types/soma-creator-application-result.type';
 
 @Injectable()
 export class SomaMembershipsService {
