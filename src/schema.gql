@@ -197,6 +197,8 @@ type Mutation {
   reviewSomaCreatorApplication(input: ReviewSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   revokeAllSessions: Float!
   revokeSession(sessionId: String!): Boolean!
+  setSomaMembershipRole(input: SetSomaMembershipRoleInput!): SomaMembership!
+  setSomaMembershipStatus(input: SetSomaMembershipStatusInput!): SomaMembership!
   submitPost(id: String!): PostResult!
   submitSomaCreatorApplication(input: SubmitSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   unfollow(userId: String!): FollowResponse!
@@ -279,8 +281,12 @@ type Query {
   me: UserResult!
   mySessions: [AuthSessionDto!]!
   mySomaCreatorApplication(somaId: String!): SomaCreatorApplication
+  mySomaCreatorApplications: [SomaCreatorApplication!]!
   mySomaMembership(somaId: String!): SomaMembership
+  myStudioPost(id: String!): PostResult!
+  myStudioPosts(statuses: [PostVisibility!]): [Post!]!
   somaCreatorReviewQueue(somaId: String!): [SomaCreatorApplication!]!
+  somaMemberships(somaId: String!): [SomaMembership!]!
   userByUsername(username: String!): UserResult!
 }
 
@@ -288,6 +294,18 @@ input ReviewSomaCreatorApplicationInput {
   applicationId: String!
   decision: SomaCreatorApplicationStatus!
   reviewerNote: String
+}
+
+input SetSomaMembershipRoleInput {
+  role: SomaMembershipRole!
+  somaId: String!
+  userId: String!
+}
+
+input SetSomaMembershipStatusInput {
+  somaId: String!
+  status: SomaMembershipStatus!
+  userId: String!
 }
 
 type Soma {

@@ -13,6 +13,8 @@ import {
   UnauthorizedError,
 } from '../../common/errors/graphql-errors';
 import { SomaCreatorApplication } from './entities/soma-creator-application.entity';
+import { SetSomaMembershipRoleInput } from './dto/set-soma-membership-role.input';
+import { SetSomaMembershipStatusInput } from './dto/set-soma-membership-status.input';
 
 export type SomaCreatorApplicationResult =
   | SomaCreatorApplication
@@ -152,6 +154,16 @@ export class SomaMembershipsService {
         });
       }
 
+      await tx.somaAccessAuditLog.create({
+        data: {
+          somaId: application.somaId,
+          actorId: reviewerId,
+          targetUserId: application.applicantId,
+          action: 'APPLICATION_REVIEWED',
+          metadata: { decision: input.decision },
+        },
+      });
+
       return tx.somaCreatorApplication.update({
         where: { id: application.id },
         data: {
@@ -173,6 +185,83 @@ export class SomaMembershipsService {
   async getMyApplication(userId: string, somaId: string) {
     return this.prisma.somaCreatorApplication.findUnique({
       where: { applicantId_somaId: { applicantId: userId, somaId } },
+    });
+  }
+
+  async getMyApplications(userId: string) {
+    return this.prisma.somaCreatorApplication.findMany({
+      where: { applicantId: userId },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  async listMemberships(actorId: string, actorRole: string, somaId: string) {
+    if (!(await this.canModerateSoma(actorId, actorRole, somaId))) {
+      return new UnauthorizedError('You cannot view this Soma membership list.');
+    }
+    return this.prisma.somaMembership.findMany({
+      where: { somaId },
+      orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async setMembershipRole(
+    actorId: string,
+    actorRole: string,
+    input: SetSomaMembershipRoleInput,
+  ) {
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { id: true },
+    });
+    if (!targetUser) return new NotFoundError('User not found.');
+
+    const existing = await this.prisma.somaMembership.findUnique({
+      where: { userId_somaId: { userId: input.userId, somaId: input.somaId } },
+    });
+    const isAdmin = actorRole === 'ADMIN';
+    const actorMembership = await this.getMyMembership(actorId, input.somaId);
+    const isOwner = actorMembership?.status === SomaMembershipStatus.ACTIVE &&
+      actorMembership.role === SomaMembershipRole.OWNER;
+    if (!isAdmin && !isOwner) {
+      return new UnauthorizedError('Only a Soma owner or admin can manage roles.');
+    }
+    if (!isAdmin && (input.role === SomaMembershipRole.OWNER || existing?.role === SomaMembershipRole.OWNER)) {
+      return new UnauthorizedError('Only an admin can create or change a Soma owner.');
+    }
+    if (!existing && !isAdmin && input.role === SomaMembershipRole.CREATOR) {
+      return new UnauthorizedError('Creator access must be granted through application approval.');
+    }
+
+    const now = new Date();
+    const membership = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.somaMembership.upsert({
+        where: { userId_somaId: { userId: input.userId, somaId: input.somaId } },
+        create: { userId: input.userId, somaId: input.somaId, role: input.role, status: SomaMembershipStatus.ACTIVE, approvedById: actorId, approvedAt: now },
+        update: { role: input.role, status: SomaMembershipStatus.ACTIVE, approvedById: actorId, approvedAt: now, suspendedAt: null, leftAt: null },
+      });
+      await tx.somaAccessAuditLog.create({ data: { somaId: input.somaId, actorId, targetUserId: input.userId, action: existing ? 'MEMBERSHIP_ROLE_CHANGED' : 'MEMBERSHIP_GRANTED', metadata: { previousRole: existing?.role, role: input.role } } });
+      return result;
+    });
+    return membership;
+  }
+
+  async setMembershipStatus(
+    actorId: string,
+    actorRole: string,
+    input: SetSomaMembershipStatusInput,
+  ) {
+    const existing = await this.prisma.somaMembership.findUnique({ where: { userId_somaId: { userId: input.userId, somaId: input.somaId } } });
+    if (!existing) return new NotFoundError('Soma membership not found.');
+    const isAdmin = actorRole === 'ADMIN';
+    const actorMembership = await this.getMyMembership(actorId, input.somaId);
+    const isOwner = actorMembership?.status === SomaMembershipStatus.ACTIVE && actorMembership.role === SomaMembershipRole.OWNER;
+    if (!isAdmin && (!isOwner || existing.role === SomaMembershipRole.OWNER)) return new UnauthorizedError('You cannot change this membership status.');
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.somaMembership.update({ where: { id: existing.id }, data: { status: input.status, suspendedAt: input.status === SomaMembershipStatus.SUSPENDED ? now : null, leftAt: input.status === SomaMembershipStatus.LEFT ? now : null } });
+      await tx.somaAccessAuditLog.create({ data: { somaId: input.somaId, actorId, targetUserId: input.userId, action: 'MEMBERSHIP_STATUS_CHANGED', metadata: { previousStatus: existing.status, status: input.status } } });
+      return result;
     });
   }
 

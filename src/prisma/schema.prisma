@@ -75,6 +75,13 @@ enum SomaCreatorApplicationStatus {
   WITHDRAWN
 }
 
+enum SomaAccessAuditAction {
+  APPLICATION_REVIEWED
+  MEMBERSHIP_GRANTED
+  MEMBERSHIP_ROLE_CHANGED
+  MEMBERSHIP_STATUS_CHANGED
+}
+
 // MODELS
 
 model User {
@@ -277,6 +284,19 @@ model SomaCreatorApplication {
   @@unique([applicantId, somaId])
   @@index([somaId, status, createdAt])
   @@map("soma_creator_applications")
+}
+
+model SomaAccessAuditLog {
+  id           String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  somaId       String @map("soma_id") @db.Uuid
+  actorId      String @map("actor_id") @db.Uuid
+  targetUserId String @map("target_user_id") @db.Uuid
+  action       SomaAccessAuditAction
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([somaId, createdAt])
+  @@map("soma_access_audit_logs")
 }
 
 model Comment {

@@ -24,6 +24,7 @@ import type { Express } from 'express';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { Soma as SomaEntity } from '../soma/entities/soma.entity';
 import { VotesService } from '../votes/votes.service';
+import { PostVisibility } from './types/post-status.enums';
 
 @Resolver(() => PostEntity)
 export class PostsResolver {
@@ -107,6 +108,25 @@ export class PostsResolver {
     @Args('data') updatePostDto: UpdatePostDto,
   ): Promise<PostResult> {
     return this.postsService.update(user.id, user.role, id, updatePostDto);
+  }
+
+  @Query(() => [PostEntity])
+  @UseGuards(JwtAuthGuard)
+  myStudioPosts(
+    @CurrentUser() user: Express.User,
+    @Args('statuses', { type: () => [PostVisibility], nullable: true })
+    statuses?: PostVisibility[],
+  ): Promise<PostEntity[]> {
+    return this.postsService.findStudioPosts(user.id, statuses);
+  }
+
+  @Query(() => PostResultUnion)
+  @UseGuards(JwtAuthGuard)
+  myStudioPost(
+    @CurrentUser() user: Express.User,
+    @Args('id') id: string,
+  ): Promise<PostResult> {
+    return this.postsService.findStudioPost(user.id, id);
   }
 
   @Mutation(() => PostResultUnion)

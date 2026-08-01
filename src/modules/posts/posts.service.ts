@@ -4,6 +4,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
 import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
+import { PostVisibility } from '../../prisma/generated/client';
 
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
@@ -125,6 +126,30 @@ export class PostsService {
     if (!post) {
       return new NotFoundError(`Post with id '${id}' not found`);
     }
+
+    return post;
+  }
+
+  async findStudioPosts(
+    userId: string,
+    statuses?: PostVisibility[],
+  ): Promise<Post[]> {
+    return this.prisma.post.findMany({
+      where: {
+        authorId: userId,
+        ...(statuses?.length ? { visibility: { in: statuses } } : {}),
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  async findStudioPost(userId: string, id: string): Promise<PostResult> {
+    const post = await this.prisma.post.findUnique({ where: { id } });
+
+    if (!post) return new NotFoundError(`Post with id '${id}' not found`);
+
+    if (post.authorId !== userId)
+      return new UnauthorizedError('You cannot view this studio post.');
 
     return post;
   }
