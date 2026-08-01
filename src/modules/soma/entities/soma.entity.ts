@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
+import { SomaMembershipMode } from '../../soma-memberships/types/soma-access.enums';
 
 @ObjectType()
 export class Soma {
@@ -22,6 +23,9 @@ export class Soma {
 
   @Field(() => Int, { defaultValue: 0 })
   weeklyVisitorCount: number;
+
+  @Field(() => SomaMembershipMode)
+  membershipMode: SomaMembershipMode;
 
   @Field(() => Date)
   createdAt: Date;

@@ -191,10 +191,13 @@ type Mutation {
   deleteComment(id: String!): CommentResult!
   deletePost(id: String!): PostResult!
   follow(userId: String!): FollowResult!
+  joinSoma(somaId: String!): SomaMembership!
+  leaveSoma(somaId: String!): SomaMembership!
   markNotificationAsRead(id: String!): NotificationResult!
   removeVote(data: DeleteVoteDto!): Boolean!
   replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
   reviewSomaCreatorApplication(input: ReviewSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
+  reviewSomaJoinRequest(input: ReviewSomaJoinRequestInput!): SomaMembership!
   revokeAllSessions: Float!
   revokeSession(sessionId: String!): Boolean!
   setSomaMembershipRole(input: SetSomaMembershipRoleInput!): SomaMembership!
@@ -296,6 +299,12 @@ input ReviewSomaCreatorApplicationInput {
   reviewerNote: String
 }
 
+input ReviewSomaJoinRequestInput {
+  approve: Boolean!
+  somaId: String!
+  userId: String!
+}
+
 input SetSomaMembershipRoleInput {
   role: SomaMembershipRole!
   somaId: String!
@@ -314,6 +323,7 @@ type Soma {
   description: String
   id: ID!
   memberCount: Int!
+  membershipMode: SomaMembershipMode!
   name: String!
   slug: String!
   updatedAt: DateTime!
@@ -362,8 +372,15 @@ type SomaMembership {
   userId: String!
 }
 
+enum SomaMembershipMode {
+  INVITE_ONLY
+  OPEN
+  REQUEST
+}
+
 enum SomaMembershipRole {
   CREATOR
+  MEMBER
   MODERATOR
   OWNER
 }
@@ -371,6 +388,7 @@ enum SomaMembershipRole {
 enum SomaMembershipStatus {
   ACTIVE
   LEFT
+  PENDING
   SUSPENDED
 }
 
@@ -406,6 +424,7 @@ input UpdatePostDto {
 input UpdateSomaDto {
   coverUrl: String
   description: String
+  membershipMode: SomaMembershipMode
 }
 
 input UpdateUserProfileDto {

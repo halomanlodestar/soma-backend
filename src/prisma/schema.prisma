@@ -55,15 +55,23 @@ enum PostVisibility {
 }
 
 enum SomaMembershipRole {
+  MEMBER
   CREATOR
   MODERATOR
   OWNER
 }
 
 enum SomaMembershipStatus {
+  PENDING
   ACTIVE
   SUSPENDED
   LEFT
+}
+
+enum SomaMembershipMode {
+  OPEN
+  REQUEST
+  INVITE_ONLY
 }
 
 enum SomaCreatorApplicationStatus {
@@ -189,6 +197,7 @@ model Soma {
   coverUrl           String? @map("cover_url")
   memberCount        Int     @default(0) @map("member_count")
   weeklyVisitorCount Int     @default(0) @map("weekly_visitor_count")
+  membershipMode     SomaMembershipMode @default(OPEN) @map("membership_mode")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

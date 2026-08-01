@@ -11,6 +11,7 @@ import { SomaCreatorApplication } from './entities/soma-creator-application.enti
 import { SomaMembership } from './entities/soma-membership.entity';
 import { SetSomaMembershipRoleInput } from './dto/set-soma-membership-role.input';
 import { SetSomaMembershipStatusInput } from './dto/set-soma-membership-status.input';
+import { ReviewSomaJoinRequestInput } from './dto/review-soma-join-request.input';
 
 @Resolver()
 export class SomaMembershipsResolver {
@@ -23,6 +24,39 @@ export class SomaMembershipsResolver {
     @Args('input') input: SubmitSomaCreatorApplicationInput,
   ) {
     return this.membershipsService.submitApplication(user.id, input);
+  }
+
+  @Mutation(() => SomaMembership)
+  @UseGuards(JwtAuthGuard)
+  async joinSoma(
+    @CurrentUser() user: Express.User,
+    @Args('somaId') somaId: string,
+  ): Promise<SomaMembership> {
+    const result = await this.membershipsService.joinSoma(user.id, somaId);
+    if ('message' in result) throw new ForbiddenException(result.message);
+    return result;
+  }
+
+  @Mutation(() => SomaMembership)
+  @UseGuards(JwtAuthGuard)
+  async leaveSoma(
+    @CurrentUser() user: Express.User,
+    @Args('somaId') somaId: string,
+  ): Promise<SomaMembership> {
+    const result = await this.membershipsService.leaveSoma(user.id, somaId);
+    if ('message' in result) throw new ForbiddenException(result.message);
+    return result;
+  }
+
+  @Mutation(() => SomaMembership)
+  @UseGuards(JwtAuthGuard)
+  async reviewSomaJoinRequest(
+    @CurrentUser() user: Express.User,
+    @Args('input') input: ReviewSomaJoinRequestInput,
+  ): Promise<SomaMembership> {
+    const result = await this.membershipsService.reviewJoinRequest(user.id, user.role, input);
+    if ('message' in result) throw new ForbiddenException(result.message);
+    return result;
   }
 
   @Mutation(() => SomaCreatorApplicationResultUnion)

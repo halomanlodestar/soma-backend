@@ -1,0 +1,4 @@
+ALTER TYPE "SomaMembershipRole" ADD VALUE IF NOT EXISTS 'MEMBER';
+ALTER TYPE "SomaMembershipStatus" ADD VALUE IF NOT EXISTS 'PENDING';
+CREATE TYPE "SomaMembershipMode" AS ENUM ('OPEN', 'REQUEST', 'INVITE_ONLY');
+ALTER TABLE "somas" ADD COLUMN "membership_mode" "SomaMembershipMode" NOT NULL DEFAULT 'OPEN';
