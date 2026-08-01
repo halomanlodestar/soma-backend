@@ -1,5 +1,5 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { ForbiddenException, UseGuards } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { StorageService } from './storage/storage.service';
 import {
@@ -8,25 +8,35 @@ import {
 } from './dto/create-media.dto';
 import { MediaCollection } from './entities/media.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
+import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
 
 @Resolver(() => MediaCollection)
 export class MediaResolver {
   constructor(
     private readonly mediaService: MediaService,
     private readonly storageService: StorageService,
+    private readonly membershipsService: SomaMembershipsService,
   ) {}
 
   @Mutation(() => UploadIntentResponseDto)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CREATOR', 'ADMIN')
+  @UseGuards(JwtAuthGuard)
   async createUploadIntent(
     @CurrentUser() user: Express.User,
     @Args('data') uploadIntentDto: UploadIntentDto,
   ): Promise<UploadIntentResponseDto> {
+    const membership =
+      await this.membershipsService.getActivePublishingMembership(
+        user.id,
+        uploadIntentDto.somaId,
+      );
+    if (!membership) {
+      throw new ForbiddenException(
+        'An active creator membership in this Soma is required to upload media.',
+      );
+    }
+
     const result = await this.storageService.generatePresignedUploadUrl(
       user.id,
       uploadIntentDto.fileName,

@@ -4,6 +4,8 @@ import {
   PostVisibility,
   MediaType,
   MediaQuality,
+  SomaMembershipRole,
+  SomaMembershipStatus,
 } from './generated/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -23,6 +25,8 @@ async function main() {
   await prisma.mediaVariant.deleteMany();
   await prisma.mediaItem.deleteMany();
   await prisma.mediaCollection.deleteMany();
+  await prisma.somaCreatorApplication.deleteMany();
+  await prisma.somaMembership.deleteMany();
   await prisma.vote.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.post.deleteMany();
@@ -93,6 +97,50 @@ async function main() {
     },
   });
 
+  const [technologyOwner, artOwner, technologyCreator, artCreator] =
+    await Promise.all([
+      prisma.somaMembership.create({
+        data: {
+          userId: user1.id,
+          somaId: soma1.id,
+          role: SomaMembershipRole.OWNER,
+          status: SomaMembershipStatus.ACTIVE,
+          approvedById: user1.id,
+          approvedAt: new Date(),
+        },
+      }),
+      prisma.somaMembership.create({
+        data: {
+          userId: user1.id,
+          somaId: soma2.id,
+          role: SomaMembershipRole.OWNER,
+          status: SomaMembershipStatus.ACTIVE,
+          approvedById: user1.id,
+          approvedAt: new Date(),
+        },
+      }),
+      prisma.somaMembership.create({
+        data: {
+          userId: user2.id,
+          somaId: soma1.id,
+          role: SomaMembershipRole.CREATOR,
+          status: SomaMembershipStatus.ACTIVE,
+          approvedById: user1.id,
+          approvedAt: new Date(),
+        },
+      }),
+      prisma.somaMembership.create({
+        data: {
+          userId: user2.id,
+          somaId: soma2.id,
+          role: SomaMembershipRole.CREATOR,
+          status: SomaMembershipStatus.ACTIVE,
+          approvedById: user1.id,
+          approvedAt: new Date(),
+        },
+      }),
+    ]);
+
   console.log('Seeding Posts...');
   const post1 = await prisma.post.create({
     data: {
@@ -101,7 +149,8 @@ async function main() {
       excerpt: 'AI is advancing...',
       authorId: user1.id,
       somaId: soma1.id,
-      visibility: PostVisibility.PUBLIC,
+      creatorMembershipId: technologyOwner.id,
+      visibility: PostVisibility.PUBLISHED,
       impressions: 150,
       voteCount: 2,
       commentCount: 1,
@@ -115,7 +164,9 @@ async function main() {
       excerpt: 'Digital painting on Procreate.',
       authorId: user2.id,
       somaId: soma2.id,
-      visibility: PostVisibility.PUBLIC,
+      creatorMembershipId: artCreator.id,
+      mediaStatus: 'READY',
+      visibility: PostVisibility.PUBLISHED,
       impressions: 200,
       voteCount: 1,
       commentCount: 1,
@@ -129,7 +180,8 @@ async function main() {
       excerpt: 'NestJS architecture.',
       authorId: user2.id,
       somaId: soma1.id,
-      visibility: PostVisibility.PUBLIC,
+      creatorMembershipId: technologyCreator.id,
+      visibility: PostVisibility.PUBLISHED,
       impressions: 80,
     },
   });

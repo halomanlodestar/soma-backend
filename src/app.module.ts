@@ -17,6 +17,7 @@ import { MediaModule } from './modules/media/media.module';
 import { AwardsModule } from './modules/awards/awards.module';
 import { FeedModule } from './modules/feed/feed.module';
 import { FollowModule } from './modules/follow/follow.module';
+import { SomaMembershipsModule } from './modules/soma-memberships/soma-memberships.module';
 import { LoggingPlugin } from './common/plugins/logging.plugin';
 import { formatError } from './common/utils/format';
 import { ConfigService } from '@nestjs/config';
@@ -56,6 +57,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AwardsModule,
     FeedModule,
     FollowModule,
+    SomaMembershipsModule,
   ],
   providers: [PrismaService, LoggingPlugin],
 })

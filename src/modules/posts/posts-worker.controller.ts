@@ -21,7 +21,7 @@ export class PostsWorkerController {
     if (!media || media.length === 0) {
       await this.prisma.post.update({
         where: { id: postId },
-        data: { visibility: 'PUBLIC' },
+        data: { mediaStatus: 'READY' },
       });
       return;
     }
@@ -52,11 +52,11 @@ export class PostsWorkerController {
 
       await tx.post.update({
         where: { id: postId },
-        data: { visibility: 'PUBLIC' },
+        data: { mediaStatus: 'READY' },
       });
     });
 
-    this.logger.log(`Post ${postId} processed and published.`);
+    this.logger.log(`Media for post ${postId} processed and ready for review.`);
   }
 
   @EventPattern('post.delete')

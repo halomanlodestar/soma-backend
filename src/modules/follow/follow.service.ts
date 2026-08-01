@@ -1,7 +1,7 @@
 import { FollowResult } from './types/follow-result.type';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, UserRole } from '../../prisma/generated/client';
+import { Prisma } from '../../prisma/generated/client';
 import {
   NotFoundError,
   InvalidInputError,
@@ -29,8 +29,19 @@ export class FollowService {
       return new NotFoundError('User not found');
     }
 
-    if (targetUser.role !== UserRole.CREATOR) {
-      return new InvalidInputError('Only creators can be followed');
+    const creatorMembership = await this.prisma.somaMembership.findFirst({
+      where: {
+        userId: followingId,
+        status: 'ACTIVE',
+        role: { in: ['CREATOR', 'MODERATOR', 'OWNER'] },
+      },
+      select: { id: true },
+    });
+
+    if (!creatorMembership) {
+      return new InvalidInputError(
+        'Only creators approved by at least one Soma can be followed',
+      );
     }
 
     try {

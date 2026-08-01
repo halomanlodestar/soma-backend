@@ -29,8 +29,8 @@ export class CommentsService {
     postId: string,
     createCommentDto: CreateCommentDto,
   ): Promise<CommentResult> {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, visibility: 'PUBLISHED' },
     });
 
     if (!post) {
@@ -83,6 +83,12 @@ export class CommentsService {
   }
 
   async findAllByPost(postId: string): Promise<Comment[]> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, visibility: 'PUBLISHED' },
+      select: { id: true },
+    });
+    if (!post) return [];
+
     return this.prisma.comment.findMany({
       where: { postId },
       orderBy: {

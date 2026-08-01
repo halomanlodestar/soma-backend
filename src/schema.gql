@@ -175,6 +175,13 @@ type MediaItem {
   type: String!
 }
 
+enum MediaProcessingStatus {
+  FAILED
+  NONE
+  PENDING
+  READY
+}
+
 type Mutation {
   createAward(data: CreateAwardDto!): AwardResult!
   createComment(data: CreateCommentDto!, postId: String!): CommentResult!
@@ -187,8 +194,11 @@ type Mutation {
   markNotificationAsRead(id: String!): NotificationResult!
   removeVote(data: DeleteVoteDto!): Boolean!
   replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
+  reviewSomaCreatorApplication(input: ReviewSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   revokeAllSessions: Float!
   revokeSession(sessionId: String!): Boolean!
+  submitPost(id: String!): PostResult!
+  submitSomaCreatorApplication(input: SubmitSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   unfollow(userId: String!): FollowResponse!
   updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
@@ -223,16 +233,29 @@ type Post {
   excerpt: String
   id: ID!
   impressions: Int!
+  mediaStatus: MediaProcessingStatus!
   mediaUrl: String
   soma: Soma!
   somaId: String!
   title: String!
   updatedAt: DateTime!
   userVoteValue: Int
+  visibility: PostVisibility!
   voteCount: Int!
 }
 
 union PostResult = InvalidInputError | NotFoundError | Post | UnauthorizedError
+
+enum PostVisibility {
+  APPROVED
+  ARCHIVED
+  DRAFT
+  NEEDS_CHANGES
+  PUBLISHED
+  REJECTED
+  REMOVED
+  SUBMITTED
+}
 
 type Query {
   getAllSomas: [Soma!]!
@@ -255,7 +278,16 @@ type Query {
   getUserById(id: String!): UserResult!
   me: UserResult!
   mySessions: [AuthSessionDto!]!
+  mySomaCreatorApplication(somaId: String!): SomaCreatorApplication
+  mySomaMembership(somaId: String!): SomaMembership
+  somaCreatorReviewQueue(somaId: String!): [SomaCreatorApplication!]!
   userByUsername(username: String!): UserResult!
+}
+
+input ReviewSomaCreatorApplicationInput {
+  applicationId: String!
+  decision: SomaCreatorApplicationStatus!
+  reviewerNote: String
 }
 
 type Soma {
@@ -270,7 +302,70 @@ type Soma {
   weeklyVisitorCount: Int!
 }
 
+type SomaCreatorApplication {
+  applicantId: String!
+  createdAt: DateTime!
+  disciplines: [String!]!
+  id: ID!
+  moderationConsent: Boolean!
+  portfolioUrls: [String!]!
+  processSamples: [String!]!
+  reviewedAt: DateTime
+  reviewerId: String
+  reviewerNote: String
+  somaId: String!
+  statement: String!
+  status: SomaCreatorApplicationStatus!
+  updatedAt: DateTime!
+}
+
+union SomaCreatorApplicationResult = InvalidInputError | NotFoundError | SomaCreatorApplication | UnauthorizedError
+
+enum SomaCreatorApplicationStatus {
+  APPROVED
+  DECLINED
+  IN_REVIEW
+  NEEDS_INFO
+  SUBMITTED
+  WITHDRAWN
+}
+
+type SomaMembership {
+  approvedAt: DateTime
+  approvedById: String
+  createdAt: DateTime!
+  id: ID!
+  leftAt: DateTime
+  role: SomaMembershipRole!
+  somaId: String!
+  status: SomaMembershipStatus!
+  suspendedAt: DateTime
+  updatedAt: DateTime!
+  userId: String!
+}
+
+enum SomaMembershipRole {
+  CREATOR
+  MODERATOR
+  OWNER
+}
+
+enum SomaMembershipStatus {
+  ACTIVE
+  LEFT
+  SUSPENDED
+}
+
 union SomaResult = InvalidInputError | NotFoundError | Soma
+
+input SubmitSomaCreatorApplicationInput {
+  disciplines: [String!]! = []
+  moderationConsent: Boolean!
+  portfolioUrls: [String!]! = []
+  processSamples: [String!]! = []
+  somaId: String!
+  statement: String!
+}
 
 enum TargetType {
   COMMENT
@@ -306,6 +401,7 @@ input UploadIntentDto {
   fileName: String!
   mediaType: String!
   mimeType: String!
+  somaId: String!
 }
 
 type UploadIntentResponseDto {

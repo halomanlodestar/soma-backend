@@ -1,18 +1,66 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { PostsService } from './posts.service';
+import { UnauthorizedError } from '../../common/errors/graphql-errors';
 
 describe('PostsService', () => {
   let service: PostsService;
+  const prisma = {
+    soma: { findUnique: jest.fn() },
+    post: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+  const client = { emit: jest.fn() };
+  const membershipsService = { getActivePublishingMembership: jest.fn() };
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [PostsService],
-    }).compile();
-
-    service = module.get<PostsService>(PostsService);
+  beforeEach(() => {
+    jest.resetAllMocks();
+    service = new PostsService(
+      prisma as never,
+      client as never,
+      membershipsService as never,
+    );
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('requires an active creator membership in the target Soma', async () => {
+    prisma.soma.findUnique.mockResolvedValue({ id: 'soma-id' });
+    membershipsService.getActivePublishingMembership.mockResolvedValue(null);
+
+    const result = await service.create('user-id', {
+      title: 'Draft work',
+      somaId: 'soma-id',
+    });
+
+    expect(result).toBeInstanceOf(UnauthorizedError);
+    expect(prisma.post.create).not.toHaveBeenCalled();
+  });
+
+  it('creates a draft and queues media verification without publishing it', async () => {
+    prisma.soma.findUnique.mockResolvedValue({ id: 'soma-id' });
+    membershipsService.getActivePublishingMembership.mockResolvedValue({
+      id: 'membership-id',
+    });
+    prisma.post.create.mockResolvedValue({ id: 'post-id', visibility: 'DRAFT' });
+
+    await service.create('user-id', {
+      title: 'Draft work',
+      somaId: 'soma-id',
+      media: [{ key: 'staging/user/image.jpg', type: 'IMAGE' }],
+    });
+
+    expect(prisma.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        visibility: 'DRAFT',
+        mediaStatus: 'PENDING',
+        creatorMembershipId: 'membership-id',
+      }),
+    });
+    expect(client.emit).toHaveBeenCalledWith('post.process_media', {
+      postId: 'post-id',
+      media: [{ key: 'staging/user/image.jpg', type: 'IMAGE' }],
+    });
   });
 });

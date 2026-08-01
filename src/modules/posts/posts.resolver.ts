@@ -18,8 +18,6 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { Post as PostEntity } from './entities/post.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { Express } from 'express';
 
@@ -64,8 +62,7 @@ export class PostsResolver {
   }
 
   @Mutation(() => PostResultUnion)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('CREATOR', 'ADMIN')
+  @UseGuards(JwtAuthGuard)
   async createPost(
     @CurrentUser() user: Express.User,
     @Args('data') createPostDto: CreatePostDto,
@@ -110,6 +107,15 @@ export class PostsResolver {
     @Args('data') updatePostDto: UpdatePostDto,
   ): Promise<PostResult> {
     return this.postsService.update(user.id, user.role, id, updatePostDto);
+  }
+
+  @Mutation(() => PostResultUnion)
+  @UseGuards(JwtAuthGuard)
+  async submitPost(
+    @CurrentUser() user: Express.User,
+    @Args('id') id: string,
+  ): Promise<PostResult> {
+    return this.postsService.submit(user.id, id);
   }
 
   @Mutation(() => PostResultUnion)

@@ -36,11 +36,43 @@ enum MediaQuality {
   PREVIEW
 }
 
+enum MediaProcessingStatus {
+  NONE
+  PENDING
+  READY
+  FAILED
+}
+
 enum PostVisibility {
-  PUBLIC
-  SUBSCRIBER_ONLY
-  WAITING
-  DELETING
+  DRAFT
+  SUBMITTED
+  NEEDS_CHANGES
+  APPROVED
+  PUBLISHED
+  REJECTED
+  REMOVED
+  ARCHIVED
+}
+
+enum SomaMembershipRole {
+  CREATOR
+  MODERATOR
+  OWNER
+}
+
+enum SomaMembershipStatus {
+  ACTIVE
+  SUSPENDED
+  LEFT
+}
+
+enum SomaCreatorApplicationStatus {
+  SUBMITTED
+  IN_REVIEW
+  NEEDS_INFO
+  APPROVED
+  DECLINED
+  WITHDRAWN
 }
 
 // MODELS
@@ -70,6 +102,11 @@ model User {
 
   followers Follow[] @relation("UserFollowers")
   following Follow[] @relation("UserFollowing")
+
+  somaMemberships         SomaMembership[]         @relation("SomaMember")
+  approvedSomaMemberships SomaMembership[]         @relation("SomaMembershipApprover")
+  somaApplications        SomaCreatorApplication[] @relation("SomaApplicationApplicant")
+  reviewedSomaApplications SomaCreatorApplication[] @relation("SomaApplicationReviewer")
 
   @@map("users")
 }
@@ -150,6 +187,8 @@ model Soma {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   posts Post[]
+  memberships         SomaMembership[]
+  creatorApplications SomaCreatorApplication[]
 
   @@map("somas")
 }
@@ -163,8 +202,10 @@ model Post {
 
   authorId    String         @map("author_id") @db.Uuid
   somaId      String         @map("soma_id") @db.Uuid
+  creatorMembershipId String? @map("creator_membership_id") @db.Uuid
   impressions Int            @default(0)
-  visibility  PostVisibility @default(WAITING)
+  visibility  PostVisibility @default(DRAFT)
+  mediaStatus MediaProcessingStatus @default(NONE) @map("media_status")
 
   voteCount    Int   @default(0) @map("vote_count")
   commentCount Int   @default(0) @map("comment_count")
@@ -175,6 +216,7 @@ model Post {
 
   author User @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
   soma   Soma @relation(fields: [somaId], references: [id], onDelete: Cascade)
+  creatorMembership SomaMembership? @relation(fields: [creatorMembershipId], references: [id], onDelete: SetNull)
 
   comments      Comment[]
   media         MediaCollection?
@@ -183,6 +225,58 @@ model Post {
   notifications Notification[]
 
   @@map("posts")
+}
+
+model SomaMembership {
+  id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  somaId String @map("soma_id") @db.Uuid
+
+  role   SomaMembershipRole
+  status SomaMembershipStatus @default(ACTIVE)
+
+  approvedById String?   @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime? @map("approved_at")
+  suspendedAt  DateTime? @map("suspended_at")
+  leftAt       DateTime? @map("left_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user       User  @relation("SomaMember", fields: [userId], references: [id], onDelete: Cascade)
+  soma       Soma  @relation(fields: [somaId], references: [id], onDelete: Cascade)
+  approvedBy User? @relation("SomaMembershipApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  posts      Post[]
+
+  @@unique([userId, somaId])
+  @@index([somaId, role, status])
+  @@map("soma_memberships")
+}
+
+model SomaCreatorApplication {
+  id          String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  applicantId String @map("applicant_id") @db.Uuid
+  somaId      String @map("soma_id") @db.Uuid
+
+  portfolioUrls  String[] @default([]) @map("portfolio_urls")
+  disciplines    String[] @default([])
+  statement      String
+  processSamples String[] @default([]) @map("process_samples")
+  moderationConsent Boolean @map("moderation_consent")
+
+  status       SomaCreatorApplicationStatus @default(SUBMITTED)
+  reviewerId   String?   @map("reviewer_id") @db.Uuid
+  reviewerNote String?   @map("reviewer_note")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  applicant User  @relation("SomaApplicationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
+  soma      Soma  @relation(fields: [somaId], references: [id], onDelete: Cascade)
+  reviewer  User? @relation("SomaApplicationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@unique([applicantId, somaId])
+  @@index([somaId, status, createdAt])
+  @@map("soma_creator_applications")
 }
 
 model Comment {

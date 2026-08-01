@@ -1,6 +1,10 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { Soma } from '../../soma/entities/soma.entity';
+import {
+  MediaProcessingStatus,
+  PostVisibility,
+} from '../types/post-status.enums';
 
 @ObjectType()
 export class Post {
@@ -39,6 +43,12 @@ export class Post {
 
   @Field(() => Int)
   impressions: number;
+
+  @Field(() => PostVisibility)
+  visibility: PostVisibility;
+
+  @Field(() => MediaProcessingStatus)
+  mediaStatus: MediaProcessingStatus;
 
   @Field(() => Date)
   createdAt: Date;

@@ -7,8 +7,8 @@ export class MediaService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getMediaByPost(postId: string): Promise<MediaCollection | null> {
-    const result = await this.prisma.mediaCollection.findUnique({
-      where: { postId },
+    const result = await this.prisma.mediaCollection.findFirst({
+      where: { postId, post: { visibility: 'PUBLISHED' } },
       include: {
         items: {
           orderBy: {

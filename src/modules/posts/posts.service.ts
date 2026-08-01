@@ -3,6 +3,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
+import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
 
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
@@ -10,7 +11,6 @@ import {
   NotFoundError,
   UnauthorizedError,
   InvalidInputError,
-  BaseError,
 } from '../../common/errors/graphql-errors';
 
 export type PostResult =
@@ -24,6 +24,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
+    private readonly membershipsService: SomaMembershipsService,
   ) {}
 
   async create(
@@ -40,6 +41,17 @@ export class PostsService {
       return new InvalidInputError(`Soma with id '${somaId}' does not exist`);
     }
 
+    const membership =
+      await this.membershipsService.getActivePublishingMembership(
+        userId,
+        somaId,
+      );
+    if (!membership) {
+      return new UnauthorizedError(
+        'You need an active creator membership in this Soma to create work.',
+      );
+    }
+
     const hasMedia = media && media.length > 0;
 
     const post = await this.prisma.post.create({
@@ -48,7 +60,9 @@ export class PostsService {
         body,
         authorId: userId,
         somaId,
-        visibility: hasMedia ? 'WAITING' : 'PUBLIC',
+        creatorMembershipId: membership.id,
+        visibility: 'DRAFT',
+        mediaStatus: hasMedia ? 'PENDING' : 'READY',
       },
     });
 
@@ -66,7 +80,7 @@ export class PostsService {
     return this.prisma.post.findMany({
       where: {
         somaId,
-        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
+        visibility: 'PUBLISHED',
       },
       orderBy: {
         createdAt: 'desc',
@@ -78,7 +92,7 @@ export class PostsService {
     return this.prisma.post.findMany({
       where: {
         authorId: userId,
-        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
+        visibility: 'PUBLISHED',
       },
       orderBy: {
         createdAt: 'desc',
@@ -93,7 +107,7 @@ export class PostsService {
       take: limit,
       skip,
       where: {
-        visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] },
+        visibility: 'PUBLISHED',
       },
       orderBy: {
         hotScore: 'desc',
@@ -105,7 +119,7 @@ export class PostsService {
 
   async findOne(id: string): Promise<PostResult> {
     const post = await this.prisma.post.findFirst({
-      where: { id, visibility: { in: ['PUBLIC', 'SUBSCRIBER_ONLY'] } },
+      where: { id, visibility: 'PUBLISHED' },
     });
 
     if (!post) {
@@ -121,13 +135,10 @@ export class PostsService {
     postId: string,
     updatePostDto: UpdatePostDto,
   ): Promise<PostResult> {
-    const postResult = await this.findOne(postId);
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) return new NotFoundError(`Post with id '${postId}' not found`);
 
-    if (postResult instanceof BaseError) {
-      return postResult;
-    }
-
-    if (postResult.authorId !== userId && userRole !== 'ADMIN') {
+    if (post.authorId !== userId && userRole !== 'ADMIN') {
       return new UnauthorizedError('You are not allowed to update this post.');
     }
 
@@ -137,24 +148,55 @@ export class PostsService {
     });
   }
 
+  async submit(userId: string, postId: string): Promise<PostResult> {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) return new NotFoundError(`Post with id '${postId}' not found`);
+    if (post.authorId !== userId) {
+      return new UnauthorizedError('You can only submit your own work.');
+    }
+    if (!['DRAFT', 'NEEDS_CHANGES'].includes(post.visibility)) {
+      return new InvalidInputError(
+        'Only drafts or work needing changes can be submitted.',
+      );
+    }
+    if (post.mediaStatus !== 'READY') {
+      return new InvalidInputError(
+        'Wait for all media to finish processing before submitting.',
+      );
+    }
+
+    const membership =
+      await this.membershipsService.getActivePublishingMembership(
+        userId,
+        post.somaId,
+      );
+    if (!membership) {
+      return new UnauthorizedError(
+        'You no longer have an active creator membership in this Soma.',
+      );
+    }
+
+    return this.prisma.post.update({
+      where: { id: postId },
+      data: { visibility: 'PUBLISHED', creatorMembershipId: membership.id },
+    });
+  }
+
   async delete(
     userId: string,
     userRole: string,
     postId: string,
   ): Promise<PostResult> {
-    const postResult = await this.findOne(postId);
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) return new NotFoundError(`Post with id '${postId}' not found`);
 
-    if (postResult instanceof BaseError) {
-      return postResult;
-    }
-
-    if (postResult.authorId !== userId && userRole !== 'ADMIN') {
+    if (post.authorId !== userId && userRole !== 'ADMIN') {
       return new UnauthorizedError('You are not allowed to delete this post.');
     }
 
     const updatedPost = await this.prisma.post.update({
       where: { id: postId },
-      data: { visibility: 'DELETING' },
+      data: { visibility: 'ARCHIVED' },
     });
 
     this.client.emit('post.delete', { postId });

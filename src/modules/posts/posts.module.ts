@@ -7,9 +7,10 @@ import { PostsWorkerController } from './posts-worker.controller';
 import { UsersModule } from '../users/users.module';
 import { SomaModule } from '../soma/soma.module';
 import { VotesModule } from '../votes/votes.module';
+import { SomaMembershipsModule } from '../soma-memberships/soma-memberships.module';
 
 @Module({
-  imports: [UsersModule, SomaModule, VotesModule],
+  imports: [UsersModule, SomaModule, VotesModule, SomaMembershipsModule],
   controllers: [PostsWorkerController],
   providers: [PostsService, PostsResolver, PrismaService, StorageService],
   exports: [PostsService],

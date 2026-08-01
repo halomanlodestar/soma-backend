@@ -22,7 +22,7 @@ export class FeedService {
     const { limit = 20, cursor } = query;
 
     const posts = await this.prisma.post.findMany({
-      where,
+      where: { ...where, visibility: 'PUBLISHED' },
       take: limit,
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor } : undefined,
