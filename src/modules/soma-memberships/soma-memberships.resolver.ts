@@ -54,7 +54,11 @@ export class SomaMembershipsResolver {
     @CurrentUser() user: Express.User,
     @Args('input') input: ReviewSomaJoinRequestInput,
   ): Promise<SomaMembership> {
-    const result = await this.membershipsService.reviewJoinRequest(user.id, user.role, input);
+    const result = await this.membershipsService.reviewJoinRequest(
+      user.id,
+      user.role,
+      input,
+    );
     if ('message' in result) throw new ForbiddenException(result.message);
     return result;
   }
@@ -113,7 +117,11 @@ export class SomaMembershipsResolver {
     @CurrentUser() user: Express.User,
     @Args('input') input: SetSomaMembershipRoleInput,
   ): Promise<SomaMembership> {
-    const result = await this.membershipsService.setMembershipRole(user.id, user.role, input);
+    const result = await this.membershipsService.setMembershipRole(
+      user.id,
+      user.role,
+      input,
+    );
     if ('message' in result) throw new ForbiddenException(result.message);
     return result;
   }
@@ -124,7 +132,11 @@ export class SomaMembershipsResolver {
     @CurrentUser() user: Express.User,
     @Args('input') input: SetSomaMembershipStatusInput,
   ): Promise<SomaMembership> {
-    const result = await this.membershipsService.setMembershipStatus(user.id, user.role, input);
+    const result = await this.membershipsService.setMembershipStatus(
+      user.id,
+      user.role,
+      input,
+    );
     if ('message' in result) throw new ForbiddenException(result.message);
     return result;
   }

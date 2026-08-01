@@ -6,7 +6,10 @@ describe('PostsWorkerController', () => {
       post: { update: jest.fn().mockResolvedValue({}) },
     };
     const storage = {};
-    const controller = new PostsWorkerController(prisma as never, storage as never);
+    const controller = new PostsWorkerController(
+      prisma as never,
+      storage as never,
+    );
 
     await controller.handleProcessMedia({ postId: 'post-id', media: [] });
 

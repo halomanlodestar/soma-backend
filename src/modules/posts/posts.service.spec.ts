@@ -46,7 +46,10 @@ describe('PostsService', () => {
     membershipsService.getActivePublishingMembership.mockResolvedValue({
       id: 'membership-id',
     });
-    prisma.post.create.mockResolvedValue({ id: 'post-id', visibility: 'DRAFT' });
+    prisma.post.create.mockResolvedValue({
+      id: 'post-id',
+      visibility: 'DRAFT',
+    });
 
     await service.create('user-id', {
       title: 'Draft work',

@@ -36,7 +36,6 @@ export class UsersResolver {
   }
 
   @ResolveField('awards')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   awards(@Parent() _user: UserResponseDto) {
     return ['Top Contributor', 'Early Adopter']; // Just some mock awards for now since award assignment logic might not be fully there.
   }

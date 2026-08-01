@@ -1,5 +1,11 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { SomaCreatorApplicationStatus } from '../types/soma-access.enums';
 
 @InputType()

@@ -51,8 +51,14 @@ export class PostsService {
     }
 
     const hasMedia = media && media.length > 0;
-    if (media?.some((item) => !this.storageService.isOwnedStagingKey(userId, item.key))) {
-      return new InvalidInputError('Every media item must be uploaded by the post author.');
+    if (
+      media?.some(
+        (item) => !this.storageService.isOwnedStagingKey(userId, item.key),
+      )
+    ) {
+      return new InvalidInputError(
+        'Every media item must be uploaded by the post author.',
+      );
     }
 
     const post = await this.prisma.post.create({

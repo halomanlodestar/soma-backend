@@ -67,13 +67,19 @@ export class PostsWorkerController {
       where: { id: data.postId },
       include: { media: { include: { items: true } } },
     });
-    if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY') return;
+    if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY')
+      return;
 
     for (const item of post.media?.items ?? []) {
-      const publishedKey = await this.storageService.publishStagedObject(item.s3Key);
+      const publishedKey = await this.storageService.publishStagedObject(
+        item.s3Key,
+      );
       await this.prisma.mediaItem.update({
         where: { id: item.id },
-        data: { s3Key: publishedKey, originalUrl: this.storageService.buildPublicUrl(publishedKey) },
+        data: {
+          s3Key: publishedKey,
+          originalUrl: this.storageService.buildPublicUrl(publishedKey),
+        },
       });
       await this.storageService.deleteStagedObject(item.s3Key);
     }
