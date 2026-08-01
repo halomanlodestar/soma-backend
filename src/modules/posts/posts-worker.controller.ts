@@ -44,7 +44,9 @@ export class PostsWorkerController {
             create: media.map((item) => ({
               type: item.type,
               s3Key: item.key,
-              originalUrl: this.storageService.buildPublicUrl(item.key),
+              originalUrl: this.storageService.buildPublicUrl(
+                this.storageService.getPublishedKey(item.key),
+              ),
             })),
           },
         },
@@ -57,6 +59,28 @@ export class PostsWorkerController {
     });
 
     this.logger.log(`Media for post ${postId} processed and ready for review.`);
+  }
+
+  @EventPattern('post.publish')
+  async handlePublishPost(@Payload() data: { postId: string }): Promise<void> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: data.postId },
+      include: { media: { include: { items: true } } },
+    });
+    if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY') return;
+
+    for (const item of post.media?.items ?? []) {
+      const publishedKey = await this.storageService.publishStagedObject(item.s3Key);
+      await this.prisma.mediaItem.update({
+        where: { id: item.id },
+        data: { s3Key: publishedKey, originalUrl: this.storageService.buildPublicUrl(publishedKey) },
+      });
+      await this.storageService.deleteStagedObject(item.s3Key);
+    }
+    await this.prisma.post.update({
+      where: { id: post.id },
+      data: { visibility: 'PUBLISHED' },
+    });
   }
 
   @EventPattern('post.delete')
@@ -86,7 +110,10 @@ export class PostsWorkerController {
     if (s3Keys.length > 0) {
       await Promise.all(
         s3Keys.map((key) =>
-          this.storageService.deleteObject(key).catch((err: unknown) => {
+          (key.startsWith('published/')
+            ? this.storageService.deletePublishedObject(key)
+            : this.storageService.deleteStagedObject(key)
+          ).catch((err: unknown) => {
             this.logger.error(
               `Failed to delete S3 object ${key} for post ${postId}`,
               err,

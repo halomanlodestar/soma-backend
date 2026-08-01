@@ -15,13 +15,16 @@ describe('PostsService', () => {
   };
   const client = { emit: jest.fn() };
   const membershipsService = { getActivePublishingMembership: jest.fn() };
+  const storageService = { isOwnedStagingKey: jest.fn().mockReturnValue(true) };
 
   beforeEach(() => {
     jest.resetAllMocks();
+    storageService.isOwnedStagingKey.mockReturnValue(true);
     service = new PostsService(
       prisma as never,
       client as never,
       membershipsService as never,
+      storageService as never,
     );
   });
 

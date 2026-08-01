@@ -16,10 +16,23 @@ export const configSchema = z.object({
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_CALLBACK_URL: z.string(),
-  S3_BUCKET: z.string(),
-  S3_REGION: z.string(),
-  S3_ACCESS_KEY_ID: z.string(),
-  S3_SECRET_ACCESS_KEY: z.string(),
+  // Legacy S3-compatible fallback. Prefer the explicit B2 values below.
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  B2_REGION: z.string().optional(),
+  B2_KEY_ID: z.string().optional(),
+  B2_APPLICATION_KEY: z.string().optional(),
+  B2_S3_ENDPOINT: z.string().url().optional(),
+  B2_STAGING_BUCKET: z.string().optional(),
+  B2_PUBLIC_BUCKET: z.string().optional(),
+  MEDIA_DELIVERY_ORIGIN: z.string().url().optional(),
+  MEDIA_UPLOAD_URL_TTL_SECONDS: z
+    .string()
+    .optional()
+    .default('600')
+    .transform((val) => parseInt(val, 10)),
   FRONTEND_URL: z.string().default('http://localhost:8000'),
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z

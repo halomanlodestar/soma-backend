@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Post } from './entities/post.entity';
 import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
 import { PostVisibility } from '../../prisma/generated/client';
+import { StorageService } from '../media/storage/storage.service';
 
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
@@ -26,6 +27,7 @@ export class PostsService {
     private readonly prisma: PrismaService,
     @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
     private readonly membershipsService: SomaMembershipsService,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(
@@ -54,6 +56,9 @@ export class PostsService {
     }
 
     const hasMedia = media && media.length > 0;
+    if (media?.some((item) => !this.storageService.isOwnedStagingKey(userId, item.key))) {
+      return new InvalidInputError('Every media item must be uploaded by the post author.');
+    }
 
     const post = await this.prisma.post.create({
       data: {
@@ -201,10 +206,12 @@ export class PostsService {
       );
     }
 
-    return this.prisma.post.update({
+    const updatedPost = await this.prisma.post.update({
       where: { id: postId },
-      data: { visibility: 'PUBLISHED', creatorMembershipId: membership.id },
+      data: { visibility: 'APPROVED', creatorMembershipId: membership.id },
     });
+    this.client.emit('post.publish', { postId });
+    return updatedPost;
   }
 
   async delete(
