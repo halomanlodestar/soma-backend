@@ -6,8 +6,11 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: 'http://localhost:3000',
-      credentials: true,
+      origin: [
+        'http://localhost:3000',
+        'https://www.soggyroll.art',
+        'https://soggyroll.art',
+      ],
     },
   });
 
