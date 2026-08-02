@@ -64,12 +64,13 @@ describe('AuthService refresh-token lifecycle', () => {
     );
   });
 
-  it('rotates an active refresh token and returns a new token pair', async () => {
+  it('returns the existing refresh token before the rotation threshold', async () => {
     const now = new Date();
     const transactionClient = {
       refreshToken: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'old-token-id',
+          issuedAt: new Date(now.getTime() - 24 * 24 * 60 * 60 * 1000),
           rotatedAt: null,
           revokedAt: null,
           expiresAt: new Date(now.getTime() + 60_000),
@@ -105,6 +106,52 @@ describe('AuthService refresh-token lifecycle', () => {
       sessionId: 'session-id',
       user,
     });
+    expect(result.refreshToken).toBe('old-refresh-token');
+    expect(transactionClient.refreshToken.updateMany).not.toHaveBeenCalled();
+    expect(transactionClient.refreshToken.create).not.toHaveBeenCalled();
+    expect(transactionClient.authSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ lastUsedAt: expect.any(Date) }),
+      }),
+    );
+  });
+
+  it('rotates a refresh token after 25 days and returns a new token pair', async () => {
+    const now = new Date();
+    const transactionClient = {
+      refreshToken: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'old-token-id',
+          issuedAt: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000),
+          rotatedAt: null,
+          revokedAt: null,
+          expiresAt: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+          session: {
+            id: 'session-id',
+            revokedAt: null,
+            expiresAt: new Date(now.getTime() + 65 * 24 * 60 * 60 * 1000),
+            user,
+          },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn().mockResolvedValue({}),
+      },
+      authSession: {
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback) => callback(transactionClient)),
+    };
+    const service = new AuthService(
+      prisma as any,
+      jwtService as any,
+      configService as any,
+    );
+
+    const result = await service.refresh('old-refresh-token');
+
     expect(result.refreshToken).not.toBe('old-refresh-token');
     expect(transactionClient.refreshToken.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -116,6 +163,14 @@ describe('AuthService refresh-token lifecycle', () => {
         data: expect.objectContaining({ sessionId: 'session-id' }),
       }),
     );
+    const rotationCreateInput =
+      transactionClient.refreshToken.create.mock.calls[0][0];
+    expect(rotationCreateInput.data.expiresAt.getTime()).toBeLessThanOrEqual(
+      now.getTime() + 30 * 24 * 60 * 60 * 1000 + 1_000,
+    );
+    expect(rotationCreateInput.data.expiresAt.getTime()).toBeGreaterThanOrEqual(
+      now.getTime() + 30 * 24 * 60 * 60 * 1000 - 1_000,
+    );
   });
 
   it('revokes the session when a rotated refresh token is replayed', async () => {
@@ -123,6 +178,7 @@ describe('AuthService refresh-token lifecycle', () => {
       refreshToken: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'old-token-id',
+          issuedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
           rotatedAt: new Date(),
           revokedAt: null,
           expiresAt: new Date(Date.now() + 60_000),

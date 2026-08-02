@@ -91,7 +91,7 @@ Both `/exchange` and `/refresh` return:
 }
 ```
 
-Replace the previous refresh token immediately after every successful refresh. A reused rotated token revokes that session and returns `401`.
+Refresh tokens remain valid for 30 days of inactivity and are rotated when they are 25 days old. Before that threshold, `/refresh` returns the existing refresh token with a new access token. On rotation, replace the previous refresh token immediately. A reused rotated token revokes that session and returns `401`.
 
 ## GraphQL session management
 

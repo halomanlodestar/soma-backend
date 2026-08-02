@@ -103,7 +103,6 @@ export class AuthService {
   async refresh(refreshToken: string): Promise<LoginResponseDto> {
     const now = new Date();
     const tokenHash = this.hashRefreshToken(refreshToken);
-    const newRefreshToken = this.createRefreshToken();
 
     const result = await this.prisma.$transaction<RefreshResult>(async (tx) => {
       const existingToken = await tx.refreshToken.findUnique({
@@ -135,6 +134,22 @@ export class AuthService {
       ) {
         return { status: 'invalid' };
       }
+
+      if (!this.isRefreshTokenDueForRotation(existingToken.issuedAt, now)) {
+        await tx.authSession.update({
+          where: { id: session.id },
+          data: { lastUsedAt: now },
+        });
+
+        return {
+          status: 'success',
+          user: session.user,
+          sessionId: session.id,
+          refreshToken,
+        };
+      }
+
+      const newRefreshToken = this.createRefreshToken();
 
       const rotation = await tx.refreshToken.updateMany({
         where: {
@@ -372,6 +387,13 @@ export class AuthService {
     );
 
     return rollingExpiry < sessionExpiresAt ? rollingExpiry : sessionExpiresAt;
+  }
+
+  private isRefreshTokenDueForRotation(issuedAt: Date, now: Date): boolean {
+    return (
+      now >=
+      this.addDays(issuedAt, AUTH_TOKEN_LIFETIMES.refreshTokenRotationDays)
+    );
   }
 
   private addDays(date: Date, days: number): Date {
