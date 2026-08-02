@@ -25,6 +25,7 @@ import { UserResponseDto } from '../users/dto/user-response.dto';
 import { Soma as SomaEntity } from '../soma/entities/soma.entity';
 import { VotesService } from '../votes/votes.service';
 import { PostVisibility } from './types/post-status.enums';
+import { QueryCacheService } from '../../common/cache/query-cache.service';
 
 @Resolver(() => PostEntity)
 export class PostsResolver {
@@ -33,6 +34,7 @@ export class PostsResolver {
     private readonly usersService: UsersService,
     private readonly somaService: SomaService,
     private readonly votesService: VotesService,
+    private readonly queryCache: QueryCacheService,
   ) {}
 
   @ResolveField(() => UserResponseDto)
@@ -79,25 +81,35 @@ export class PostsResolver {
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 })
     limit: number,
   ): Promise<PostEntity[]> {
-    return this.postsService.findTopPosts(page, limit);
+    return this.queryCache.getOrSet(
+      `query:posts:top:${page}:${limit}`,
+      120_000,
+      () => this.postsService.findTopPosts(page, limit),
+    );
   }
 
   @Query(() => [PostEntity])
   @UseGuards(OptionalJwtAuthGuard)
   async getPostsBySoma(@Args('somaId') somaId: string): Promise<PostEntity[]> {
-    return this.postsService.findBySoma(somaId);
+    return this.queryCache.getOrSet(`query:posts:soma:${somaId}`, 120_000, () =>
+      this.postsService.findBySoma(somaId),
+    );
   }
 
   @Query(() => [PostEntity])
   @UseGuards(OptionalJwtAuthGuard)
   async getPostsByUser(@Args('userId') userId: string): Promise<PostEntity[]> {
-    return this.postsService.findByUser(userId);
+    return this.queryCache.getOrSet(`query:posts:user:${userId}`, 120_000, () =>
+      this.postsService.findByUser(userId),
+    );
   }
 
   @Query(() => PostResultUnion)
   @UseGuards(OptionalJwtAuthGuard)
   async getPostById(@Args('id') id: string): Promise<PostResult> {
-    return this.postsService.findOne(id);
+    return this.queryCache.getOrSet(`query:post:${id}`, 120_000, () =>
+      this.postsService.findOne(id),
+    );
   }
 
   @Mutation(() => PostResultUnion)

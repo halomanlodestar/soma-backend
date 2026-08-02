@@ -16,18 +16,24 @@ import { FeedQueryDto } from './dto/feed-query.dto';
 import { FeedConnectionQueryDto } from './dto/feed-connection-query.dto';
 import { FeedItem } from './entities/feed-item.entity';
 import { FeedConnection } from './entities/feed-connection.entity';
+import { QueryCacheService } from '../../common/cache/query-cache.service';
 
 @Resolver(() => FeedItem)
 export class FeedResolver {
   constructor(
     private readonly feedService: FeedService,
     private readonly votesService: VotesService,
+    private readonly queryCache: QueryCacheService,
   ) {}
 
   @Query(() => [FeedItem])
   @UseGuards(OptionalJwtAuthGuard)
   async getGlobalFeed(@Args() query: FeedQueryDto): Promise<FeedItem[]> {
-    return this.feedService.getGlobalFeed(query);
+    return this.queryCache.getOrSet(
+      `query:feed:global:${query.limit ?? 20}:${query.cursor ?? 'first'}`,
+      120_000,
+      () => this.feedService.getGlobalFeed(query),
+    );
   }
 
   @Query(() => [FeedItem])
@@ -36,7 +42,11 @@ export class FeedResolver {
     @Args('somaId') somaId: string,
     @Args() query: FeedQueryDto,
   ): Promise<FeedItem[]> {
-    return this.feedService.getSomaFeed(somaId, query);
+    return this.queryCache.getOrSet(
+      `query:feed:soma:${somaId}:${query.limit ?? 20}:${query.cursor ?? 'first'}`,
+      120_000,
+      () => this.feedService.getSomaFeed(somaId, query),
+    );
   }
 
   @Query(() => FeedConnection)
@@ -44,7 +54,11 @@ export class FeedResolver {
   globalFeedConnection(
     @Args() query: FeedConnectionQueryDto,
   ): Promise<FeedConnection> {
-    return this.feedService.getGlobalFeedConnection(query);
+    return this.queryCache.getOrSet(
+      `query:feed-connection:global:${query.first}:${query.after ?? 'first'}`,
+      120_000,
+      () => this.feedService.getGlobalFeedConnection(query),
+    );
   }
 
   @Query(() => FeedConnection)
@@ -53,7 +67,11 @@ export class FeedResolver {
     @Args('somaId') somaId: string,
     @Args() query: FeedConnectionQueryDto,
   ): Promise<FeedConnection> {
-    return this.feedService.getSomaFeedConnection(somaId, query);
+    return this.queryCache.getOrSet(
+      `query:feed-connection:soma:${somaId}:${query.first}:${query.after ?? 'first'}`,
+      120_000,
+      () => this.feedService.getSomaFeedConnection(somaId, query),
+    );
   }
 
   @ResolveField(() => Int, { nullable: true })

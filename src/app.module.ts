@@ -24,9 +24,11 @@ import { formatError } from './common/utils/format';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { QueryCacheModule } from './common/cache/query-cache.module';
 
 @Module({
   imports: [
+    QueryCacheModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),

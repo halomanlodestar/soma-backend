@@ -9,10 +9,14 @@ import { Soma as SomaEntity } from './entities/soma.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { QueryCacheService } from '../../common/cache/query-cache.service';
 
 @Resolver(() => SomaEntity)
 export class SomaResolver {
-  constructor(private readonly somaService: SomaService) {}
+  constructor(
+    private readonly somaService: SomaService,
+    private readonly queryCache: QueryCacheService,
+  ) {}
 
   @Mutation(() => SomaResultUnion)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,11 +39,18 @@ export class SomaResolver {
 
   @Query(() => [SomaEntity])
   async getAllSomas(): Promise<SomaEntity[]> {
-    return this.somaService.findAll();
+    return this.queryCache.getOrSet('query:somas:all', 300_000, () =>
+      this.somaService.findAll(),
+    );
   }
 
   @Query(() => SomaResultUnion)
   async getSomaBySlug(@Args('slug') slug: string): Promise<SomaResult> {
-    return this.somaService.findBySlug(slug);
+    const normalizedSlug = slug.toLowerCase();
+    return this.queryCache.getOrSet(
+      `query:soma:slug:${normalizedSlug}`,
+      300_000,
+      () => this.somaService.findBySlug(normalizedSlug),
+    );
   }
 }
