@@ -42,7 +42,9 @@ import { ThrottlerModule } from '@nestjs/throttler';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'single',
-        url: `redis://${configService.get<string>('REDIS_HOST')}:${configService.get<string>('REDIS_PORT')}`,
+        url:
+          configService.get<string>('REDIS_URL') ??
+          `redis://${configService.get<string>('REDIS_HOST')}:${configService.get<string>('REDIS_PORT')}`,
       }),
     }),
     RabbitMQModule,

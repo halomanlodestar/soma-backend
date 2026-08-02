@@ -34,6 +34,9 @@ export const configSchema = z.object({
     .default('600')
     .transform((val) => parseInt(val, 10)),
   FRONTEND_URL: z.string().default('http://localhost:8000'),
+  // Prefer a complete Redis URI in production, e.g.
+  // rediss://default:password@redis.example.com:6379
+  REDIS_URL: z.string().min(1).optional(),
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z
     .string()
