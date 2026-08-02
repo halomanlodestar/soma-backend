@@ -103,4 +103,4 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
-          ssh "$DEPLOY_USER@$EC2_HOST" "sudo systemctl is-active --quiet '$APP_NAME'; curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 -X POST -H 'Content-Type: application/json' --data '{\"query\":\"{__typename}\"}' http://127.0.0.1:8000/api/v1/graphql > /dev/null"
+          ssh "$DEPLOY_USER@$EC2_HOST" "sudo systemctl is-active --quiet '$APP_NAME'; if ! curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 2 -X POST -H 'Content-Type: application/json' --data '{\"query\":\"{__typename}\"}' http://127.0.0.1:8000/api/v1/graphql > /dev/null; then sudo journalctl -u '$APP_NAME' -n 100 --no-pager; exit 1; fi"

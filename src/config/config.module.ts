@@ -14,6 +14,7 @@ import { configSchema } from './config.schema';
           const formattedErrors = parsed.error.issues
             .map((err) => `${err.path.join('.')} - ${err.message}`)
             .join('; ');
+          console.error(`Config validation error: ${formattedErrors}`);
           throw new Error(`Config validation error: ${formattedErrors}`);
         }
 
