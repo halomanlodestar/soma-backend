@@ -43,7 +43,13 @@ type Collection {
 
 type CollectionItem {
   id: ID!
-  position: Float!
+  position: Int!
+  post: Post!
+  postId: String!
+}
+
+input CollectionPostInput {
+  collectionId: String!
   postId: String!
 }
 
@@ -66,6 +72,12 @@ input CreateAwardDto {
   name: String!
   targetId: String!
   targetType: AwardTargetType!
+}
+
+input CreateCollectionInput {
+  description: String
+  isPublic: Boolean! = false
+  title: String!
 }
 
 input CreateCommentDto {
@@ -104,6 +116,12 @@ scalar DateTime
 input DeleteVoteDto {
   targetId: String!
   targetType: TargetType!
+}
+
+type FeedConnection {
+  nodes: [FeedItem!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
 }
 
 type FeedItem {
@@ -196,20 +214,23 @@ enum MediaProcessingStatus {
 }
 
 type Mutation {
-  addPostToCollection(collectionId: String!, postId: String!): CollectionItem
+  addPostToCollection(input: CollectionPostInput!): CollectionItem
   createAward(data: CreateAwardDto!): AwardResult!
-  createCollection(description: String, isPublic: Boolean, title: String!): Collection!
+  createCollection(input: CreateCollectionInput!): Collection!
   createComment(data: CreateCommentDto!, postId: String!): CommentResult!
   createPost(data: CreatePostDto!): PostResult!
   createSoma(data: CreateSomaDto!): SomaResult!
   createUploadIntent(data: UploadIntentDto!): UploadIntentResponseDto!
+  deleteCollection(collectionId: String!): Boolean!
   deleteComment(id: String!): CommentResult!
   deletePost(id: String!): PostResult!
   follow(userId: String!): FollowResult!
   joinSoma(somaId: String!): SomaMembership!
   leaveSoma(somaId: String!): SomaMembership!
   markNotificationAsRead(id: String!): NotificationResult!
+  removePostFromCollection(input: CollectionPostInput!): Boolean!
   removeVote(data: DeleteVoteDto!): Boolean!
+  reorderCollectionItems(input: ReorderCollectionItemsInput!): Boolean!
   replyToComment(commentId: String!, data: CreateCommentDto!): CommentResult!
   reviewSomaCreatorApplication(input: ReviewSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   reviewSomaJoinRequest(input: ReviewSomaJoinRequestInput!): SomaMembership!
@@ -222,6 +243,7 @@ type Mutation {
   submitSomaCreatorApplication(input: SubmitSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   unfollow(userId: String!): FollowResponse!
   unsavePost(postId: String!): Boolean!
+  updateCollection(input: UpdateCollectionInput!): Collection
   updateComment(data: UpdateCommentDto!, id: String!): CommentResult!
   updateMyProfile(data: UpdateUserProfileDto!): UserResult!
   updatePost(data: UpdatePostDto!, id: String!): PostResult!
@@ -245,6 +267,13 @@ type Notification {
 }
 
 union NotificationResult = NotFoundError | Notification | UnauthorizedError
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
 
 type Post {
   author: UserResponseDto!
@@ -299,6 +328,7 @@ type Query {
   getSomaFeed(cursor: String, limit: Int = 20, somaId: String!): [FeedItem!]!
   getTopPosts(limit: Int = 20, page: Int = 1): [Post!]!
   getUserById(id: String!): UserResult!
+  globalFeedConnection(after: String, first: Int! = 20): FeedConnection!
   isPostSaved(postId: String!): Boolean!
   me: UserResult!
   myCollections: [Collection!]!
@@ -310,8 +340,14 @@ type Query {
   myStudioPost(id: String!): PostResult!
   myStudioPosts(statuses: [PostVisibility!]): [Post!]!
   somaCreatorReviewQueue(somaId: String!): [SomaCreatorApplication!]!
+  somaFeedConnection(after: String, first: Int! = 20, somaId: String!): FeedConnection!
   somaMemberships(somaId: String!): [SomaMembership!]!
   userByUsername(username: String!): UserResult!
+}
+
+input ReorderCollectionItemsInput {
+  collectionId: String!
+  postIds: [String!]!
 }
 
 input ReviewSomaCreatorApplicationInput {
@@ -431,6 +467,13 @@ enum TargetType {
 
 type UnauthorizedError {
   message: String!
+}
+
+input UpdateCollectionInput {
+  collectionId: String!
+  description: String
+  isPublic: Boolean
+  title: String
 }
 
 input UpdateCommentDto {
