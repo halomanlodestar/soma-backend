@@ -82,10 +82,14 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
+          set -euo pipefail
+          : "${DEPLOY_SSH_KEY:?Add the DEPLOY_SSH_KEY repository secret.}"
+          : "${EC2_HOST:?Add the EC2_HOST repository secret.}"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh -o BatchMode=yes -o ConnectTimeout=10 "$DEPLOY_USER@$EC2_HOST" true
 
       - name: Upload and activate release
         env:
