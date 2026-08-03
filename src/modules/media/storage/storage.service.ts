@@ -4,7 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   HeadObjectCommand,
-  CopyObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   NotFound,
 } from '@aws-sdk/client-s3';
@@ -14,52 +14,46 @@ import type { PresignedUploadResult } from '../types/media.types';
 
 @Injectable()
 export class StorageService {
-  private readonly s3Client: S3Client;
-  private readonly stagingBucket: string;
+  private readonly privateS3Client: S3Client;
+  private readonly publicS3Client: S3Client;
+  private readonly privateBucket: string;
   private readonly publicBucket: string;
-  private readonly deliveryOrigin: string;
-  private readonly region: string;
+  private readonly publicAssetBaseUrl: string;
   private readonly uploadUrlTtlSeconds: number;
 
   constructor(private readonly configService: ConfigService) {
-    const legacyBucket = this.configService.get<string>('S3_BUCKET');
-    this.stagingBucket =
-      this.configService.get<string>('B2_STAGING_BUCKET') ??
-      this.requireStorageValue(legacyBucket, 'B2_STAGING_BUCKET');
+    this.privateBucket = this.configService.getOrThrow<string>('S3_BUCKET');
     this.publicBucket =
-      this.configService.get<string>('B2_PUBLIC_BUCKET') ??
-      this.requireStorageValue(legacyBucket, 'B2_PUBLIC_BUCKET');
-    this.region =
-      this.configService.get<string>('B2_REGION') ??
-      this.requireStorageValue(
-        this.configService.get<string>('S3_REGION'),
-        'B2_REGION',
-      );
+      this.configService.getOrThrow<string>('PUBLIC_S3_BUCKET');
+    this.publicAssetBaseUrl = this.configService
+      .getOrThrow<string>('PUBLIC_ASSET_BASE_URL')
+      .replace(/\/+$/, '');
     this.uploadUrlTtlSeconds = this.configService.getOrThrow<number>(
       'MEDIA_UPLOAD_URL_TTL_SECONDS',
     );
 
-    this.s3Client = new S3Client({
-      region: this.region,
-      endpoint: this.configService.get<string>('B2_S3_ENDPOINT'),
+    this.privateS3Client = new S3Client({
+      region: this.configService.getOrThrow<string>('S3_REGION'),
+      endpoint: this.configService.getOrThrow<string>('S3_ENDPOINT'),
       credentials: {
-        accessKeyId:
-          this.configService.get<string>('B2_KEY_ID') ??
-          this.requireStorageValue(
-            this.configService.get<string>('S3_ACCESS_KEY_ID'),
-            'B2_KEY_ID',
-          ),
-        secretAccessKey:
-          this.configService.get<string>('B2_APPLICATION_KEY') ??
-          this.requireStorageValue(
-            this.configService.get<string>('S3_SECRET_ACCESS_KEY'),
-            'B2_APPLICATION_KEY',
-          ),
+        accessKeyId: this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.getOrThrow<string>(
+          'S3_SECRET_ACCESS_KEY',
+        ),
       },
     });
-    this.deliveryOrigin =
-      this.configService.get<string>('MEDIA_DELIVERY_ORIGIN') ??
-      `https://${this.publicBucket}.s3.${this.region}.amazonaws.com`;
+    this.publicS3Client = new S3Client({
+      region: this.configService.getOrThrow<string>('PUBLIC_S3_REGION'),
+      endpoint: this.configService.getOrThrow<string>('PUBLIC_S3_ENDPOINT'),
+      credentials: {
+        accessKeyId: this.configService.getOrThrow<string>(
+          'PUBLIC_S3_ACCESS_KEY_ID',
+        ),
+        secretAccessKey: this.configService.getOrThrow<string>(
+          'PUBLIC_S3_SECRET_ACCESS_KEY',
+        ),
+      },
+    });
   }
 
   async generatePresignedUploadUrl(
@@ -73,14 +67,18 @@ export class StorageService {
     const key = `staging/${userId}/${timestamp}-${random}${extension}`;
 
     const command = new PutObjectCommand({
-      Bucket: this.stagingBucket,
+      Bucket: this.privateBucket,
       Key: key,
       ContentType: mimeType,
     });
 
-    const presignedUploadUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: this.uploadUrlTtlSeconds,
-    });
+    const presignedUploadUrl = await getSignedUrl(
+      this.privateS3Client,
+      command,
+      {
+        expiresIn: this.uploadUrlTtlSeconds,
+      },
+    );
 
     const finalPublicUrl = this.buildPublicUrl(this.getPublishedKey(key));
 
@@ -100,26 +98,14 @@ export class StorageService {
     return key.startsWith(`staging/${userId}/`);
   }
 
-  private requireStorageValue(
-    value: string | undefined,
-    preferredName: string,
-  ): string {
-    if (!value) {
-      throw new Error(
-        `Missing ${preferredName}; configure the B2 storage variables or the legacy S3-compatible fallback.`,
-      );
-    }
-    return value;
-  }
-
   getPublishedKey(stagingKey: string): string {
     return `published/${stagingKey.replace(/^staging\//, '')}`;
   }
 
   async verifyKeyExists(key: string): Promise<boolean> {
     try {
-      await this.s3Client.send(
-        new HeadObjectCommand({ Bucket: this.stagingBucket, Key: key }),
+      await this.privateS3Client.send(
+        new HeadObjectCommand({ Bucket: this.privateBucket, Key: key }),
       );
       return true;
     } catch (err) {
@@ -132,29 +118,37 @@ export class StorageService {
 
   async publishStagedObject(stagingKey: string): Promise<string> {
     const publishedKey = this.getPublishedKey(stagingKey);
-    await this.s3Client.send(
-      new CopyObjectCommand({
+    const stagedObject = await this.privateS3Client.send(
+      new GetObjectCommand({ Bucket: this.privateBucket, Key: stagingKey }),
+    );
+    if (!stagedObject.Body) {
+      throw new Error(`Storage object ${stagingKey} has no body`);
+    }
+
+    await this.publicS3Client.send(
+      new PutObjectCommand({
         Bucket: this.publicBucket,
         Key: publishedKey,
-        CopySource: `${this.stagingBucket}/${encodeURIComponent(stagingKey)}`,
+        Body: stagedObject.Body,
+        ContentType: stagedObject.ContentType,
       }),
     );
     return publishedKey;
   }
 
   async deleteStagedObject(key: string): Promise<void> {
-    await this.s3Client.send(
-      new DeleteObjectCommand({ Bucket: this.stagingBucket, Key: key }),
+    await this.privateS3Client.send(
+      new DeleteObjectCommand({ Bucket: this.privateBucket, Key: key }),
     );
   }
 
   async deletePublishedObject(key: string): Promise<void> {
-    await this.s3Client.send(
+    await this.publicS3Client.send(
       new DeleteObjectCommand({ Bucket: this.publicBucket, Key: key }),
     );
   }
 
   buildPublicUrl(key: string): string {
-    return `${this.deliveryOrigin}/${key}`;
+    return `${this.publicAssetBaseUrl}/${key}`;
   }
 }
