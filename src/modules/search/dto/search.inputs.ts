@@ -3,7 +3,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -11,17 +10,12 @@ import {
 } from 'class-validator';
 
 @InputType()
-export class SearchPostsInput {
+export class SearchInput {
   @Field(() => String)
   @IsString()
   @MinLength(2)
   @MaxLength(100)
   query: string;
-
-  @Field(() => String, { nullable: true })
-  @IsOptional()
-  @IsUUID()
-  somaId?: string;
 
   @Field(() => Int, { defaultValue: 20 })
   @IsInt()

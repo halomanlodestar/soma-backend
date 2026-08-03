@@ -2,9 +2,9 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { createHash } from 'crypto';
 import { QueryCacheService } from '../../common/cache/query-cache.service';
 import { SearchService } from './search.service';
-import { AutocompleteInput, SearchPostsInput } from './dto/search.inputs';
+import { AutocompleteInput, SearchInput } from './dto/search.inputs';
 import { AutocompleteResult } from './entities/autocomplete-result.entity';
-import { PostSearchConnection } from './entities/post-search-connection.entity';
+import { SearchConnection } from './entities/search-connection.entity';
 
 @Resolver()
 export class SearchResolver {
@@ -13,10 +13,10 @@ export class SearchResolver {
     private readonly queryCache: QueryCacheService,
   ) {}
 
-  @Query(() => PostSearchConnection)
-  searchPosts(@Args('input') input: SearchPostsInput) {
+  @Query(() => SearchConnection)
+  search(@Args('input') input: SearchInput) {
     return this.queryCache.getOrSet(this.searchCacheKey(input), 120_000, () =>
-      this.searchService.searchPosts(input),
+      this.searchService.search(input),
     );
   }
 
@@ -29,11 +29,10 @@ export class SearchResolver {
     );
   }
 
-  private searchCacheKey(input: SearchPostsInput): string {
+  private searchCacheKey(input: SearchInput): string {
     return [
-      'query:search:posts:v1',
+      'query:search:all:v2',
       this.queryHash(input.query),
-      input.somaId ?? 'all',
       input.first,
       input.after ?? 'first-page',
     ].join(':');

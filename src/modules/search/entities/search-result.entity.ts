@@ -2,7 +2,7 @@ import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { SearchResultKind } from '../types/search-result-kind.enum';
 
 @ObjectType()
-export class AutocompleteResult {
+export class SearchResult {
   @Field(() => SearchResultKind)
   kind: SearchResultKind;
 

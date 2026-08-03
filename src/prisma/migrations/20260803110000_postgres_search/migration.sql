@@ -27,3 +27,20 @@ ON "somas" (lower("name") text_pattern_ops);
 
 CREATE INDEX "somas_slug_prefix_idx"
 ON "somas" (lower("slug") text_pattern_ops);
+
+CREATE INDEX "somas_search_document_idx"
+ON "somas" USING GIN (
+  (
+    setweight(to_tsvector('english', coalesce("name", '')), 'A') ||
+    setweight(to_tsvector('english', coalesce("description", '')), 'B')
+  )
+);
+
+CREATE INDEX "users_search_document_idx"
+ON "users" USING GIN (
+  (
+    setweight(to_tsvector('english', coalesce("username", '')), 'A') ||
+    setweight(to_tsvector('english', coalesce("display_name", '')), 'A') ||
+    setweight(to_tsvector('english', coalesce("bio", '')), 'B')
+  )
+);

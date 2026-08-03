@@ -26,16 +26,10 @@ input AutocompleteInput {
 type AutocompleteResult {
   id: ID!
   imageUrl: String
-  kind: AutocompleteResultKind!
+  kind: SearchResultKind!
   slug: String
   subtitle: String
   title: String!
-}
-
-enum AutocompleteResultKind {
-  CREATOR
-  POST
-  SOMA
 }
 
 type Award {
@@ -317,12 +311,6 @@ type Post {
 
 union PostResult = InvalidInputError | NotFoundError | Post | UnauthorizedError
 
-type PostSearchConnection {
-  nodes: [Post!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
-}
-
 enum PostVisibility {
   APPROVED
   ARCHIVED
@@ -366,7 +354,7 @@ type Query {
   mySomaMembership(somaId: String!): SomaMembership
   myStudioPost(id: String!): PostResult!
   myStudioPosts(statuses: [PostVisibility!]): [Post!]!
-  searchPosts(input: SearchPostsInput!): PostSearchConnection!
+  search(input: SearchInput!): SearchConnection!
   somaCreatorReviewQueue(somaId: String!): [SomaCreatorApplication!]!
   somaFeedConnection(after: String, first: Int! = 20, somaId: String!): FeedConnection!
   somaMemberships(somaId: String!): [SomaMembership!]!
@@ -390,11 +378,31 @@ input ReviewSomaJoinRequestInput {
   userId: String!
 }
 
-input SearchPostsInput {
+type SearchConnection {
+  nodes: [SearchResult!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input SearchInput {
   after: String
   first: Int! = 20
   query: String!
-  somaId: String
+}
+
+type SearchResult {
+  id: ID!
+  imageUrl: String
+  kind: SearchResultKind!
+  slug: String
+  subtitle: String
+  title: String!
+}
+
+enum SearchResultKind {
+  CREATOR
+  POST
+  SOMA
 }
 
 input SetSomaMembershipRoleInput {
