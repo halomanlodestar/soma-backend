@@ -19,6 +19,7 @@ import { FeedModule } from './modules/feed/feed.module';
 import { FollowModule } from './modules/follow/follow.module';
 import { SomaMembershipsModule } from './modules/soma-memberships/soma-memberships.module';
 import { CollectionsModule } from './modules/collections/collections.module';
+import { SearchModule } from './modules/search/search.module';
 import { LoggingPlugin } from './common/plugins/logging.plugin';
 import { formatError } from './common/utils/format';
 import { ConfigService } from '@nestjs/config';
@@ -64,6 +65,7 @@ import { QueryCacheModule } from './common/cache/query-cache.module';
     FollowModule,
     SomaMembershipsModule,
     CollectionsModule,
+    SearchModule,
   ],
   providers: [PrismaService, LoggingPlugin],
 })
