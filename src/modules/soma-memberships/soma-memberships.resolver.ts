@@ -122,7 +122,9 @@ export class SomaMembershipsResolver {
       user.role,
       input,
     );
+
     if ('message' in result) throw new ForbiddenException(result.message);
+
     return result;
   }
 
@@ -152,9 +154,7 @@ export class SomaMembershipsResolver {
       user.role,
       somaId,
     );
-    if (!Array.isArray(result)) {
-      throw new ForbiddenException(result.message);
-    }
+    if (!Array.isArray(result)) throw new ForbiddenException(result.message);
     return result;
   }
 }
