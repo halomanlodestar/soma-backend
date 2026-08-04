@@ -121,6 +121,7 @@ export class StorageService {
     const stagedObject = await this.privateS3Client.send(
       new GetObjectCommand({ Bucket: this.privateBucket, Key: stagingKey }),
     );
+
     if (!stagedObject.Body) {
       throw new Error(`Storage object ${stagingKey} has no body`);
     }
@@ -131,8 +132,10 @@ export class StorageService {
         Key: publishedKey,
         Body: stagedObject.Body,
         ContentType: stagedObject.ContentType,
+        ContentLength: stagedObject.ContentLength,
       }),
     );
+
     return publishedKey;
   }
 
