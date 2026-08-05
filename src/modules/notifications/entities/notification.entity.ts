@@ -9,6 +9,9 @@ export class Notification implements PrismaNotification {
   @Field(() => String)
   userId: string;
 
+  @Field(() => String, { nullable: true })
+  sourceEventId: string | null;
+
   @Field(() => String)
   type: string;
 

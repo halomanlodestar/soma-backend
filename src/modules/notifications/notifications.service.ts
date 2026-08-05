@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
 } from '../../common/errors/graphql-errors';
 import { NotificationResult } from './types/notification-result.type';
+import type { CreateNotificationEvent } from './types/notification-events.type';
 
 @Injectable()
 export class NotificationsService {
@@ -26,6 +27,23 @@ export class NotificationsService {
         commentId,
       },
     });
+  }
+
+  async processCreate(event: CreateNotificationEvent): Promise<Notification> {
+    const notification = await this.prisma.notification.upsert({
+      where: { sourceEventId: event.sourceEventId },
+      create: {
+        sourceEventId: event.sourceEventId,
+        userId: event.userId,
+        type: event.type,
+        message: event.message,
+        postId: event.postId,
+        commentId: event.commentId,
+      },
+      update: {},
+    });
+
+    return notification;
   }
 
   async findAll(userId: string): Promise<Notification[]> {

@@ -1,22 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Comment } from './entities/comment.entity';
-import { NotificationsService } from '../notifications/notifications.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
+import { randomUUID } from 'crypto';
+import type { CreateCommentEvent } from './types/comment-events.type';
 import {
   NotFoundError,
   UnauthorizedError,
-  InvalidInputError,
   BaseError,
 } from '../../common/errors/graphql-errors';
 import { CommentResult } from './types/comment-result.type';
+import { AsyncAccepted } from '../../common/entities/async-accepted.entity';
 
 @Injectable()
 export class CommentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationsService: NotificationsService,
+    @Inject('COMMANDS_RMQ_CLIENT') private readonly client: ClientProxy,
+    @Inject('NOTIFICATIONS_RMQ_CLIENT')
+    private readonly notificationsClient: ClientProxy,
   ) {}
 
   async create(
@@ -24,32 +29,17 @@ export class CommentsService {
     postId: string,
     createCommentDto: CreateCommentDto,
   ): Promise<CommentResult> {
-    const post = await this.prisma.post.findFirst({
-      where: { id: postId, visibility: 'PUBLISHED' },
-    });
-
-    if (!post) {
-      return new InvalidInputError(`Post with id '${postId}' does not exist`);
-    }
-
-    const comment = await this.prisma.comment.create({
-      data: {
-        content: createCommentDto.content,
-        authorId: userId,
+    const commandId = randomUUID();
+    await lastValueFrom(
+      this.client.emit('comment.create', {
+        commandId,
+        userId,
         postId,
-      },
-    });
+        content: createCommentDto.content,
+      } satisfies CreateCommentEvent),
+    );
 
-    if (post.authorId !== userId) {
-      await this.notificationsService.create({
-        userId: post.authorId,
-        type: 'COMMENT',
-        message: `Someone commented on your post: "${post.title}"`,
-        postId: postId,
-      });
-    }
-
-    return comment;
+    return new AsyncAccepted(commandId);
   }
 
   async reply(
@@ -57,24 +47,62 @@ export class CommentsService {
     parentCommentId: string,
     createCommentDto: CreateCommentDto,
   ): Promise<CommentResult> {
-    const parent = await this.prisma.comment.findUnique({
-      where: { id: parentCommentId },
+    const commandId = randomUUID();
+    await lastValueFrom(
+      this.client.emit('comment.create', {
+        commandId,
+        userId,
+        postId: undefined,
+        content: createCommentDto.content,
+        parentCommentId,
+      } satisfies CreateCommentEvent),
+    );
+
+    return new AsyncAccepted(commandId);
+  }
+
+  async processCreate(event: CreateCommentEvent): Promise<void> {
+    const parent = event.parentCommentId
+      ? await this.prisma.comment.findUnique({
+          where: { id: event.parentCommentId },
+          select: { id: true, postId: true },
+        })
+      : null;
+    const postId = parent?.postId ?? event.postId;
+    if (!postId) return;
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, visibility: 'PUBLISHED' },
+      select: { authorId: true, title: true },
     });
 
-    if (!parent) {
-      return new InvalidInputError(
-        `Parent comment with id '${parentCommentId}' does not exist`,
-      );
+    if (!post || (event.parentCommentId && !parent)) {
+      return;
     }
 
-    return this.prisma.comment.create({
-      data: {
-        content: createCommentDto.content,
-        authorId: userId,
-        postId: parent.postId,
-        parentCommentId: parent.id,
+    await this.prisma.comment.upsert({
+      where: { id: event.commandId },
+      create: {
+        id: event.commandId,
+        content: event.content,
+        authorId: event.userId,
+        postId,
+        parentCommentId: parent?.id,
       },
+      update: {},
     });
+
+    if (post.authorId !== event.userId) {
+      await lastValueFrom(
+        this.notificationsClient.emit('notification.create', {
+          sourceEventId: `comment:${event.commandId}`,
+          userId: post.authorId,
+          type: 'COMMENT',
+          message: `Someone commented on your post: "${post.title}"`,
+          postId,
+          commentId: event.commandId,
+        }),
+      );
+    }
   }
 
   async findAllByPost(postId: string): Promise<Comment[]> {
@@ -125,6 +153,10 @@ export class CommentsService {
       return commentResult;
     }
 
+    if (!('authorId' in commentResult)) {
+      return commentResult;
+    }
+
     if (commentResult.authorId !== userId && userRole !== 'ADMIN') {
       return new UnauthorizedError(
         'You can only update your own comments unless you are an admin',
@@ -145,6 +177,10 @@ export class CommentsService {
     const commentResult = await this.findOne(commentId);
 
     if (commentResult instanceof BaseError) {
+      return commentResult;
+    }
+
+    if (!('authorId' in commentResult)) {
       return commentResult;
     }
 

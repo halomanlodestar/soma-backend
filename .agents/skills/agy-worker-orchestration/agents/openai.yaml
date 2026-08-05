@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agy Worker Orchestration"
+  short_description: "Delegate and verify tasks with agy workers"
+  default_prompt: "Use $agy-worker-orchestration to delegate this task to agy workers and verify the result."

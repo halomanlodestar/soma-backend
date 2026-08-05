@@ -471,6 +471,7 @@ model Award {
 model Notification {
   id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
   userId String @map("user_id") @db.Uuid
+  sourceEventId String? @unique @map("source_event_id")
 
   type    String // e.g. "COMMENT", "AWARD"
   message String
