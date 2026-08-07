@@ -120,10 +120,6 @@ export class SomaMembershipsService {
     if (!application)
       return new NotFoundError('Creator application not found.');
 
-    if (application.applicantId === reviewerId) {
-      return new UnauthorizedError('You cannot review your own application.');
-    }
-
     if (
       !(await this.canModerateSoma(
         reviewerId,
