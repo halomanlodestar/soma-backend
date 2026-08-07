@@ -18,6 +18,6 @@ export class PlatformRolesGuard implements CanActivate {
     const user = GqlExecutionContext.create(context).getContext<{
       req: { user?: Express.User };
     }>().req.user;
-    return Boolean(user && requiredRoles.includes(user.role));
+    return Boolean(user && requiredRoles.includes(user.platformRole));
   }
 }

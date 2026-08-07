@@ -16,16 +16,23 @@ export class FollowStatus {
 }
 
 @ObjectType()
-export class FollowUserDto {
-  @Field(() => ID)
-  id: string;
-
+export class FollowProfileDto {
   @Field(() => String)
   username: string;
 
   @Field(() => String, { nullable: true })
   displayName: string | null;
 
+}
+
+@ObjectType()
+export class FollowUserDto {
+  @Field(() => ID)
+  id: string;
+
   @Field(() => String)
-  role: string;
+  platformRole: string;
+
+  @Field(() => FollowProfileDto, { nullable: true })
+  profile: FollowProfileDto | null;
 }

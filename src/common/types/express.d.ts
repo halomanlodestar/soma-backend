@@ -5,9 +5,11 @@ declare global {
     interface User {
       id: string;
       email: string;
-      username: string;
-      displayName: string | null;
-      role: UserRole;
+      platformRole: UserRole;
+      profile: {
+        username: string;
+        displayName: string | null;
+      } | null;
     }
   }
 }

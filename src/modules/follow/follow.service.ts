@@ -101,7 +101,7 @@ export class FollowService {
         },
       },
     });
-    return follows.map((f) => this.toFollowUser(f.follower));
+    return follows.map((f) => f.follower as FollowUserDto);
   }
 
   async getFollowing(userId: string): Promise<FollowUserDto[]> {
@@ -117,7 +117,7 @@ export class FollowService {
         },
       },
     });
-    return follows.map((f) => this.toFollowUser(f.following));
+    return follows.map((f) => f.following as FollowUserDto);
   }
 
   async getFollowStatus(
@@ -133,20 +133,5 @@ export class FollowService {
       },
     });
     return { isFollowing: !!follow };
-  }
-
-  private toFollowUser(user: {
-    id: string;
-    platformRole: string;
-    profile: { username: string; displayName: string | null } | null;
-  }): FollowUserDto {
-    if (!user.profile) throw new NotFoundError('User profile not found');
-
-    return {
-      id: user.id,
-      username: user.profile.username,
-      displayName: user.profile.displayName,
-      role: user.platformRole,
-    };
   }
 }

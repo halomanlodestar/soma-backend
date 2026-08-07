@@ -5,17 +5,10 @@ describe('AuthService refresh-token lifecycle', () => {
   const user = {
     id: '019fb3af-9e9f-7b34-9a23-1c7fecb0575e',
     email: 'user@example.com',
-    username: 'user',
-    displayName: 'User',
-    role: 'VIEWER' as const,
-  };
-  const sessionUser = {
-    id: user.id,
-    email: user.email,
-    platformRole: user.role,
+    platformRole: 'VIEWER' as const,
     profile: {
-      username: user.username,
-      displayName: user.displayName,
+      username: 'user',
+      displayName: 'User',
     },
   };
 
@@ -36,8 +29,8 @@ describe('AuthService refresh-token lifecycle', () => {
     const createdUser = {
       id: user.id,
       email: user.email,
-      platformRole: user.role,
-      profile: sessionUser.profile,
+      platformRole: user.platformRole,
+      profile: user.profile,
     };
     const tx = { user: { create: jest.fn().mockResolvedValue(createdUser) } };
     const prisma = {
@@ -85,7 +78,7 @@ describe('AuthService refresh-token lifecycle', () => {
   it('logs in through the existing Google account instead of matching by email', async () => {
     const prisma = {
       authAccount: {
-        findUnique: jest.fn().mockResolvedValue({ user: sessionUser }),
+        findUnique: jest.fn().mockResolvedValue({ user }),
       },
     };
     const service = new AuthService(
@@ -168,7 +161,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
-            user: sessionUser,
+            user,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -220,7 +213,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(now.getTime() + 65 * 24 * 60 * 60 * 1000),
-            user: sessionUser,
+            user,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -276,7 +269,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(Date.now() + 60_000),
-            user: sessionUser,
+            user,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),

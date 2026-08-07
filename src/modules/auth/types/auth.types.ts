@@ -15,9 +15,11 @@ export interface AuthSessionMetadata {
 export interface LoginUser {
   id: string;
   email: string;
-  username: string;
-  displayName: string | null;
-  role: UserRole;
+  platformRole: UserRole;
+  profile: {
+    username: string;
+    displayName: string | null;
+  } | null;
 }
 
 export type RefreshResult =

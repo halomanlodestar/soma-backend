@@ -56,7 +56,7 @@ export class SomaMembershipsResolver {
   ): Promise<SomaMembership> {
     const result = await this.membershipsService.reviewJoinRequest(
       user.id,
-      user.role,
+      user.platformRole,
       input,
     );
     if ('message' in result) throw new ForbiddenException(result.message);
@@ -69,7 +69,7 @@ export class SomaMembershipsResolver {
     @CurrentUser() user: Express.User,
     @Args('input') input: ReviewSomaCreatorApplicationInput,
   ) {
-    return this.membershipsService.reviewApplication(user.id, user.role, input);
+    return this.membershipsService.reviewApplication(user.id, user.platformRole, input);
   }
 
   @Query(() => SomaMembership, { nullable: true })
@@ -104,7 +104,7 @@ export class SomaMembershipsResolver {
   ): Promise<SomaMembership[]> {
     const result = await this.membershipsService.listMemberships(
       user.id,
-      user.role,
+      user.platformRole,
       somaId,
     );
     if (!Array.isArray(result)) throw new ForbiddenException(result.message);
@@ -119,7 +119,7 @@ export class SomaMembershipsResolver {
   ): Promise<SomaMembership> {
     const result = await this.membershipsService.setMembershipRole(
       user.id,
-      user.role,
+      user.platformRole,
       input,
     );
 
@@ -136,7 +136,7 @@ export class SomaMembershipsResolver {
   ): Promise<SomaMembership> {
     const result = await this.membershipsService.setMembershipStatus(
       user.id,
-      user.role,
+      user.platformRole,
       input,
     );
     if ('message' in result) throw new ForbiddenException(result.message);
@@ -151,7 +151,7 @@ export class SomaMembershipsResolver {
   ): Promise<SomaCreatorApplication[]> {
     const result = await this.membershipsService.getReviewQueue(
       user.id,
-      user.role,
+      user.platformRole,
       somaId,
     );
     if (!Array.isArray(result)) throw new ForbiddenException(result.message);

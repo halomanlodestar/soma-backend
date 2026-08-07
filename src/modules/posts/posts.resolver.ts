@@ -119,7 +119,7 @@ export class PostsResolver {
     @Args('id') id: string,
     @Args('data') updatePostDto: UpdatePostDto,
   ): Promise<PostResult> {
-    return this.postsService.update(user.id, user.role, id, updatePostDto);
+    return this.postsService.update(user.id, user.platformRole, id, updatePostDto);
   }
 
   @Query(() => [PostEntity])
@@ -156,6 +156,6 @@ export class PostsResolver {
     @CurrentUser() user: Express.User,
     @Args('id') id: string,
   ): Promise<PostResult> {
-    return this.postsService.delete(user.id, user.role, id);
+    return this.postsService.delete(user.id, user.platformRole, id);
   }
 }

@@ -5,7 +5,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { createHmac, randomBytes } from 'node:crypto';
 import { AUTH_TOKEN_LIFETIMES } from '../../config/auth-token.constants';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { UserRole } from '../../prisma/generated/client';
 import { LoginResponseDto } from './dto/login-response.dto';
 import type {
   AuthSessionMetadata,
@@ -43,7 +42,7 @@ export class AuthService {
     });
 
     if (account) {
-      return this.toLoginUser(account.user);
+      return account.user;
     }
 
     const username = await this.generateUniqueUsername(email, displayName);
@@ -73,7 +72,7 @@ export class AuthService {
       }),
     );
 
-    return this.toLoginUser(user);
+    return user;
   }
 
   async validateUser(userId: string) {
@@ -81,7 +80,7 @@ export class AuthService {
       where: { id: userId },
       include: { profile: true },
     });
-    return user ? this.toLoginUser(user) : null;
+    return user;
   }
 
   async login(
@@ -126,9 +125,8 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
+        platformRole: user.platformRole,
+        profile: user.profile,
       },
     };
   }
@@ -178,7 +176,7 @@ export class AuthService {
 
         return {
           status: 'success',
-          user: this.toLoginUser(session.user),
+          user: session.user,
           sessionId: session.id,
           refreshToken,
         };
@@ -221,7 +219,7 @@ export class AuthService {
 
       return {
         status: 'success',
-        user: this.toLoginUser(session.user),
+        user: session.user,
         sessionId: session.id,
         refreshToken: newRefreshToken,
       };
@@ -243,9 +241,8 @@ export class AuthService {
       user: {
         id: result.user.id,
         email: result.user.email,
-        username: result.user.username,
-        displayName: result.user.displayName,
-        role: result.user.role,
+        platformRole: result.user.platformRole,
+        profile: result.user.profile,
       },
     };
   }
@@ -286,7 +283,7 @@ export class AuthService {
       throw new UnauthorizedException('Authentication handoff already used');
     }
 
-    return this.login(this.toLoginUser(handoff.user));
+    return this.login(handoff.user);
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -397,28 +394,9 @@ export class AuthService {
   private async createAccessToken(user: LoginUser, sessionId: string) {
     return this.jwtService.signAsync({
       sub: user.id,
-      role: user.role,
+      role: user.platformRole,
       sid: sessionId,
     });
-  }
-
-  private toLoginUser(user: {
-    id: string;
-    email: string;
-    platformRole: UserRole;
-    profile: { username: string; displayName: string | null } | null;
-  }): LoginUser {
-    if (!user.profile) {
-      throw new UnauthorizedException('User profile is missing.');
-    }
-
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.profile.username,
-      displayName: user.profile.displayName,
-      role: user.platformRole,
-    };
   }
 
   private createRefreshToken(): string {

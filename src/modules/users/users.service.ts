@@ -18,20 +18,20 @@ export class UsersService {
       return new NotFoundError('User not found');
     }
 
-    return this.toUserResponse(user);
+    return user.profile ? user : new NotFoundError('User profile not found');
   }
 
   async findByUsername(username: string): Promise<UserResult> {
-    const profile = await this.prisma.userProfile.findUnique({
-      where: { username },
-      include: { user: true },
+    const user = await this.prisma.user.findFirst({
+      where: { profile: { is: { username } } },
+      include: { profile: true },
     });
 
-    if (!profile) {
+    if (!user) {
       return new NotFoundError('User not found');
     }
 
-    return this.toUserResponse({ ...profile.user, profile });
+    return user.profile ? user : new NotFoundError('User profile not found');
   }
 
   async updateProfile(
@@ -39,51 +39,24 @@ export class UsersService {
     updateUserProfileDto: UpdateUserProfileDto,
   ): Promise<UserResult> {
     try {
-      const profile = await this.prisma.userProfile.update({
-        where: { userId },
+      const user = await this.prisma.user.update({
+        where: { id: userId },
         data: {
-          displayName: updateUserProfileDto.displayName,
-          bio: updateUserProfileDto.bio,
-          avatarUrl: updateUserProfileDto.avatarUrl,
-          coverUrl: updateUserProfileDto.coverUrl,
+          profile: {
+            update: {
+              displayName: updateUserProfileDto.displayName,
+              bio: updateUserProfileDto.bio,
+              avatarUrl: updateUserProfileDto.avatarUrl,
+              coverUrl: updateUserProfileDto.coverUrl,
+            },
+          },
         },
+        include: { profile: true },
       });
 
-      return this.findById(profile.userId);
+      return user.profile ? user : new NotFoundError('User profile not found');
     } catch {
       return new NotFoundError('User not found');
     }
-  }
-
-  private toUserResponse(user: {
-    id: string;
-    email: string;
-    emailVerified: boolean;
-    platformRole: string;
-    createdAt: Date;
-    updatedAt: Date;
-    profile: {
-      username: string;
-      displayName: string | null;
-      bio: string | null;
-      avatarUrl: string | null;
-      coverUrl: string | null;
-    } | null;
-  }): UserResult {
-    if (!user.profile) return new NotFoundError('User profile not found');
-
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.profile.username,
-      displayName: user.profile.displayName,
-      bio: user.profile.bio,
-      avatarUrl: user.profile.avatarUrl,
-      coverUrl: user.profile.coverUrl,
-      isVerified: user.emailVerified,
-      role: user.platformRole,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
   }
 }

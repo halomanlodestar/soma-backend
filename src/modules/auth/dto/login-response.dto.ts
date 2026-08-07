@@ -6,8 +6,10 @@ export class LoginResponseDto {
   user: {
     id: string;
     email: string;
-    username: string;
-    displayName: string | null;
-    role: string;
+    platformRole: string;
+    profile: {
+      username: string;
+      displayName: string | null;
+    } | null;
   };
 }

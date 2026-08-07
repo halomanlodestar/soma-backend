@@ -16,13 +16,7 @@ export class UserStats {
 }
 
 @ObjectType()
-export class UserResponseDto {
-  @Field(() => ID)
-  id: string;
-
-  @Field(() => String)
-  email: string;
-
+export class UserProfileResponseDto {
   @Field(() => String)
   username: string;
 
@@ -32,8 +26,23 @@ export class UserResponseDto {
   @Field(() => String, { nullable: true })
   bio: string | null;
 
+  @Field(() => String, { nullable: true })
+  avatarUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  coverUrl: string | null;
+}
+
+@ObjectType()
+export class UserResponseDto {
+  @Field(() => ID)
+  id: string;
+
   @Field(() => String)
-  role: string;
+  email: string;
+
+  @Field(() => String)
+  platformRole: string;
 
   @Field(() => Date)
   createdAt: Date;
@@ -41,14 +50,11 @@ export class UserResponseDto {
   @Field(() => Date)
   updatedAt: Date;
 
-  @Field(() => String, { nullable: true })
-  avatarUrl: string | null;
-
-  @Field(() => String, { nullable: true })
-  coverUrl: string | null;
-
   @Field(() => Boolean)
-  isVerified: boolean;
+  emailVerified: boolean;
+
+  @Field(() => UserProfileResponseDto, { nullable: true })
+  profile: UserProfileResponseDto | null;
 
   @Field(() => UserStats, { nullable: true })
   stats?: UserStats;

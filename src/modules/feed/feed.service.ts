@@ -78,28 +78,7 @@ export class FeedService {
       },
     });
 
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-    return posts.map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      body: post.body,
-      excerpt: post.excerpt,
-      mediaUrl: post.mediaUrl,
-      createdAt: post.createdAt,
-      author: this.toFeedAuthor(post.author),
-      soma: post.soma,
-      media: post.media
-        ? {
-            items: post.media.items.map((item) => ({
-              type: item.type,
-              originalUrl: item.originalUrl,
-            })),
-          }
-        : null,
-      voteCount: post.voteCount,
-      commentCount: post.commentCount,
-      awardCount: 0,
-    }));
+    return posts as unknown as FeedItem[];
   }
 
   private async fetchFeedConnection(
@@ -166,9 +145,7 @@ export class FeedService {
 
     const hasNextPage = posts.length > query.first;
     const pagePosts = posts.slice(0, query.first);
-    const nodes = pagePosts.map((post) =>
-      this.toFeedItem({ ...post, author: this.toFeedAuthor(post.author) }),
-    );
+    const nodes = pagePosts as unknown as FeedItem[];
     const cursors = pagePosts.map((post) =>
       this.encodeCursor({
         hotScore: post.hotScore,
@@ -210,54 +187,4 @@ export class FeedService {
     }
   }
 
-  private toFeedItem(post: {
-    id: string;
-    title: string;
-    body: string | null;
-    excerpt: string | null;
-    mediaUrl: string | null;
-    createdAt: Date;
-    author: FeedItem['author'];
-    soma: FeedItem['soma'];
-    media: { items: { type: string; originalUrl: string }[] } | null;
-    voteCount: number;
-    commentCount: number;
-  }): FeedItem {
-    return {
-      id: post.id,
-      title: post.title,
-      body: post.body,
-      excerpt: post.excerpt,
-      mediaUrl: post.mediaUrl,
-      createdAt: post.createdAt,
-      author: post.author,
-      soma: post.soma,
-      media: post.media,
-      voteCount: post.voteCount,
-      commentCount: post.commentCount,
-      awardCount: 0,
-    };
-  }
-
-  private toFeedAuthor(author: {
-    id: string;
-    emailVerified: boolean;
-    profile: {
-      username: string;
-      displayName: string | null;
-      avatarUrl: string | null;
-      coverUrl: string | null;
-    } | null;
-  }): FeedItem['author'] {
-    if (!author.profile) throw new Error('Post author profile is missing.');
-
-    return {
-      id: author.id,
-      username: author.profile.username,
-      displayName: author.profile.displayName,
-      avatarUrl: author.profile.avatarUrl,
-      coverUrl: author.profile.coverUrl,
-      isVerified: author.emailVerified,
-    };
-  }
 }

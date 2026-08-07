@@ -2,10 +2,7 @@ import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import { UserStats } from '../../users/dto/user-response.dto';
 
 @ObjectType()
-export class FeedUser {
-  @Field(() => ID)
-  id: string;
-
+export class FeedUserProfile {
   @Field(() => String)
   username: string;
 
@@ -18,8 +15,18 @@ export class FeedUser {
   @Field(() => String, { nullable: true })
   coverUrl?: string | null;
 
+}
+
+@ObjectType()
+export class FeedUser {
+  @Field(() => ID)
+  id: string;
+
   @Field(() => Boolean, { defaultValue: false })
-  isVerified: boolean;
+  emailVerified: boolean;
+
+  @Field(() => FeedUserProfile, { nullable: true })
+  profile: FeedUserProfile | null;
 
   @Field(() => UserStats, { nullable: true })
   stats?: UserStats;

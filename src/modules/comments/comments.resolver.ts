@@ -91,7 +91,7 @@ export class CommentsResolver {
   ): Promise<CommentResult> {
     return this.commentsService.update(
       user.id,
-      user.role,
+      user.platformRole,
       id,
       updateCommentDto,
     );
@@ -103,6 +103,6 @@ export class CommentsResolver {
     @CurrentUser() user: Express.User,
     @Args('id') id: string,
   ): Promise<CommentResult> {
-    return this.commentsService.remove(user.id, user.role, id);
+    return this.commentsService.remove(user.id, user.platformRole, id);
   }
 }
