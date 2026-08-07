@@ -16,6 +16,10 @@ enum UserRole {
   ADMIN
 }
 
+enum AuthProvider {
+  GOOGLE
+}
+
 enum AuthClientType {
   WEB
   IOS
@@ -93,20 +97,16 @@ enum SomaAccessAuditAction {
 // MODELS
 
 model User {
-  id          String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email       String  @unique
-  username    String  @unique
-  displayName String? @map("display_name")
-  bio         String?
-  avatarUrl   String? @map("avatar_url")
-  coverUrl    String? @map("cover_url")
-  isVerified  Boolean @default(false) @map("is_verified")
-
-  role UserRole @default(VIEWER)
+  id            String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email         String  @unique
+  emailVerified Boolean @default(false) @map("email_verified")
+  platformRole  UserRole @default(VIEWER) @map("platform_role")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  profile       UserProfile?
+  authAccounts  AuthAccount[]
   posts         Post[]         @relation("UserPosts")
   comments      Comment[]      @relation("UserComments")
   votes         Vote[]
@@ -126,6 +126,39 @@ model User {
   collections             Collection[]
 
   @@map("users")
+}
+
+model UserProfile {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  username    String   @unique
+  displayName String?  @map("display_name")
+  bio         String?
+  avatarUrl   String?  @map("avatar_url")
+  coverUrl    String?  @map("cover_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model AuthAccount {
+  id                String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  provider          AuthProvider
+  providerAccountId String       @map("provider_account_id")
+  providerEmail     String?      @map("provider_email")
+  emailVerified     Boolean      @default(false) @map("email_verified")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("auth_accounts")
 }
 
 model AuthHandoff {

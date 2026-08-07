@@ -11,25 +11,27 @@ export class UsersService {
   async findById(id: string): Promise<UserResult> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      include: { profile: true },
     });
 
     if (!user) {
       return new NotFoundError('User not found');
     }
 
-    return user;
+    return this.toUserResponse(user);
   }
 
   async findByUsername(username: string): Promise<UserResult> {
-    const user = await this.prisma.user.findUnique({
+    const profile = await this.prisma.userProfile.findUnique({
       where: { username },
+      include: { user: true },
     });
 
-    if (!user) {
+    if (!profile) {
       return new NotFoundError('User not found');
     }
 
-    return user;
+    return this.toUserResponse({ ...profile.user, profile });
   }
 
   async updateProfile(
@@ -37,8 +39,8 @@ export class UsersService {
     updateUserProfileDto: UpdateUserProfileDto,
   ): Promise<UserResult> {
     try {
-      const user = await this.prisma.user.update({
-        where: { id: userId },
+      const profile = await this.prisma.userProfile.update({
+        where: { userId },
         data: {
           displayName: updateUserProfileDto.displayName,
           bio: updateUserProfileDto.bio,
@@ -47,9 +49,41 @@ export class UsersService {
         },
       });
 
-      return user;
+      return this.findById(profile.userId);
     } catch {
       return new NotFoundError('User not found');
     }
+  }
+
+  private toUserResponse(user: {
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    platformRole: string;
+    createdAt: Date;
+    updatedAt: Date;
+    profile: {
+      username: string;
+      displayName: string | null;
+      bio: string | null;
+      avatarUrl: string | null;
+      coverUrl: string | null;
+    } | null;
+  }): UserResult {
+    if (!user.profile) return new NotFoundError('User profile not found');
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.profile.username,
+      displayName: user.profile.displayName,
+      bio: user.profile.bio,
+      avatarUrl: user.profile.avatarUrl,
+      coverUrl: user.profile.coverUrl,
+      isVerified: user.emailVerified,
+      role: user.platformRole,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   }
 }

@@ -21,9 +21,9 @@ const somaDocument = Prisma.sql`
   setweight(to_tsvector('english', coalesce(s.description, '')), 'B')
 `;
 const creatorDocument = Prisma.sql`
-  setweight(to_tsvector('english', coalesce(u.username, '')), 'A') ||
-  setweight(to_tsvector('english', coalesce(u.display_name, '')), 'A') ||
-  setweight(to_tsvector('english', coalesce(u.bio, '')), 'B')
+  setweight(to_tsvector('english', coalesce(up.username, '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(up.display_name, '')), 'A') ||
+  setweight(to_tsvector('english', coalesce(up.bio, '')), 'B')
 `;
 
 @Injectable()
@@ -32,6 +32,7 @@ export class SearchService {
 
   async search(input: SearchInput): Promise<SearchConnection> {
     const query = input.query.trim();
+
     if (query.length < 2) {
       throw new BadRequestException(
         'Search queries must contain two characters.',
@@ -85,12 +86,13 @@ export class SearchService {
       SELECT
         u.id::text AS id,
         'CREATOR'::text AS kind,
-        coalesce(u.display_name, u.username) AS title,
-        coalesce(u.bio, '@' || u.username) AS subtitle,
-        u.username AS slug,
-        u.avatar_url AS "imageUrl",
+        coalesce(up.display_name, up.username) AS title,
+        coalesce(up.bio, '@' || up.username) AS subtitle,
+        up.username AS slug,
+        up.avatar_url AS "imageUrl",
         ts_rank_cd(${creatorDocument}, search_query.query)::float8 AS rank
       FROM users u
+      INNER JOIN user_profiles up ON up.user_id = u.id
       CROSS JOIN search_query
       WHERE ${creatorDocument} @@ search_query.query
     `;
@@ -153,11 +155,12 @@ export class SearchService {
           avatarUrl: string | null;
         }[]
       >(Prisma.sql`
-        SELECT id, username, display_name AS "displayName", avatar_url AS "avatarUrl"
-        FROM users
-        WHERE lower(username) LIKE ${prefix}
-          OR lower(coalesce(display_name, '')) LIKE ${prefix}
-        ORDER BY is_verified DESC, username ASC
+        SELECT up.user_id AS id, up.username, up.display_name AS "displayName", up.avatar_url AS "avatarUrl"
+        FROM user_profiles up
+        INNER JOIN users u ON u.id = up.user_id
+        WHERE lower(up.username) LIKE ${prefix}
+          OR lower(coalesce(up.display_name, '')) LIKE ${prefix}
+        ORDER BY u.email_verified DESC, up.username ASC
         LIMIT ${input.first}
       `),
       this.prisma.$queryRaw<

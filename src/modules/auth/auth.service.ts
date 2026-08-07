@@ -5,6 +5,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { createHmac, randomBytes } from 'node:crypto';
 import { AUTH_TOKEN_LIFETIMES } from '../../config/auth-token.constants';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { UserRole } from '../../prisma/generated/client';
 import { LoginResponseDto } from './dto/login-response.dto';
 import type {
   AuthSessionMetadata,
@@ -23,32 +24,64 @@ export class AuthService {
   ) {}
 
   async validateGoogleUser(googleUser: GoogleUserData) {
-    const { email, displayName } = googleUser;
+    const {
+      email,
+      emailVerified,
+      displayName,
+      profilePhoto,
+      providerAccountId,
+    } = googleUser;
 
-    let user = await this.prisma.user.findUnique({
-      where: { email },
+    const account = await this.prisma.authAccount.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: 'GOOGLE',
+          providerAccountId,
+        },
+      },
+      include: { user: { include: { profile: true } } },
     });
 
-    if (!user) {
-      const username = await this.generateUniqueUsername(email, displayName);
-
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          username,
-          displayName,
-          role: 'VIEWER',
-        },
-      });
+    if (account) {
+      return this.toLoginUser(account.user);
     }
 
-    return user;
+    const username = await this.generateUniqueUsername(email, displayName);
+    const user = await this.prisma.$transaction((tx) =>
+      tx.user.create({
+        data: {
+          email,
+          emailVerified,
+          platformRole: 'VIEWER',
+          profile: {
+            create: {
+              username,
+              displayName,
+              avatarUrl: profilePhoto,
+            },
+          },
+          authAccounts: {
+            create: {
+              provider: 'GOOGLE',
+              providerAccountId,
+              providerEmail: email,
+              emailVerified,
+            },
+          },
+        },
+        include: { profile: true },
+      }),
+    );
+
+    return this.toLoginUser(user);
   }
 
   async validateUser(userId: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { profile: true },
     });
+    return user ? this.toLoginUser(user) : null;
   }
 
   async login(
@@ -107,7 +140,9 @@ export class AuthService {
     const result = await this.prisma.$transaction<RefreshResult>(async (tx) => {
       const existingToken = await tx.refreshToken.findUnique({
         where: { tokenHash },
-        include: { session: { include: { user: true } } },
+        include: {
+          session: { include: { user: { include: { profile: true } } } },
+        },
       });
 
       if (!existingToken) {
@@ -143,7 +178,7 @@ export class AuthService {
 
         return {
           status: 'success',
-          user: session.user,
+          user: this.toLoginUser(session.user),
           sessionId: session.id,
           refreshToken,
         };
@@ -186,7 +221,7 @@ export class AuthService {
 
       return {
         status: 'success',
-        user: session.user,
+        user: this.toLoginUser(session.user),
         sessionId: session.id,
         refreshToken: newRefreshToken,
       };
@@ -233,7 +268,7 @@ export class AuthService {
     const now = new Date();
     const handoff = await this.prisma.authHandoff.findUnique({
       where: { codeHash: this.hashRefreshToken(code) },
-      include: { user: true },
+      include: { user: { include: { profile: true } } },
     });
 
     if (!handoff || handoff.usedAt || handoff.expiresAt <= now) {
@@ -251,7 +286,7 @@ export class AuthService {
       throw new UnauthorizedException('Authentication handoff already used');
     }
 
-    return this.login(handoff.user);
+    return this.login(this.toLoginUser(handoff.user));
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -367,6 +402,25 @@ export class AuthService {
     });
   }
 
+  private toLoginUser(user: {
+    id: string;
+    email: string;
+    platformRole: UserRole;
+    profile: { username: string; displayName: string | null } | null;
+  }): LoginUser {
+    if (!user.profile) {
+      throw new UnauthorizedException('User profile is missing.');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.profile.username,
+      displayName: user.profile.displayName,
+      role: user.platformRole,
+    };
+  }
+
   private createRefreshToken(): string {
     return randomBytes(32).toString('base64url');
   }
@@ -413,7 +467,7 @@ export class AuthService {
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '');
 
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = await this.prisma.userProfile.findUnique({
       where: { username: baseUsername },
     });
 
@@ -423,7 +477,7 @@ export class AuthService {
 
     if (displayName) {
       const nameUsername = displayName.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const existingNameUser = await this.prisma.user.findUnique({
+      const existingNameUser = await this.prisma.userProfile.findUnique({
         where: { username: nameUsername },
       });
 
@@ -437,7 +491,7 @@ export class AuthService {
       const randomSuffix = Math.floor(Math.random() * 10000);
       const candidateUsername = `${baseUsername}${randomSuffix}`;
 
-      const existing = await this.prisma.user.findUnique({
+      const existing = await this.prisma.userProfile.findUnique({
         where: { username: candidateUsername },
       });
 

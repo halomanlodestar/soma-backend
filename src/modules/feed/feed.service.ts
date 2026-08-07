@@ -47,11 +47,15 @@ export class FeedService {
         author: {
           select: {
             id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-            coverUrl: true,
-            isVerified: true,
+            emailVerified: true,
+            profile: {
+              select: {
+                username: true,
+                displayName: true,
+                avatarUrl: true,
+                coverUrl: true,
+              },
+            },
           },
         },
         soma: {
@@ -82,7 +86,7 @@ export class FeedService {
       excerpt: post.excerpt,
       mediaUrl: post.mediaUrl,
       createdAt: post.createdAt,
-      author: post.author,
+      author: this.toFeedAuthor(post.author),
       soma: post.soma,
       media: post.media
         ? {
@@ -125,11 +129,15 @@ export class FeedService {
           author: {
             select: {
               id: true,
-              username: true,
-              displayName: true,
-              avatarUrl: true,
-              coverUrl: true,
-              isVerified: true,
+              emailVerified: true,
+              profile: {
+                select: {
+                  username: true,
+                  displayName: true,
+                  avatarUrl: true,
+                  coverUrl: true,
+                },
+              },
             },
           },
           soma: {
@@ -158,7 +166,9 @@ export class FeedService {
 
     const hasNextPage = posts.length > query.first;
     const pagePosts = posts.slice(0, query.first);
-    const nodes = pagePosts.map((post) => this.toFeedItem(post));
+    const nodes = pagePosts.map((post) =>
+      this.toFeedItem({ ...post, author: this.toFeedAuthor(post.author) }),
+    );
     const cursors = pagePosts.map((post) =>
       this.encodeCursor({
         hotScore: post.hotScore,
@@ -226,6 +236,28 @@ export class FeedService {
       voteCount: post.voteCount,
       commentCount: post.commentCount,
       awardCount: 0,
+    };
+  }
+
+  private toFeedAuthor(author: {
+    id: string;
+    emailVerified: boolean;
+    profile: {
+      username: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+      coverUrl: string | null;
+    } | null;
+  }): FeedItem['author'] {
+    if (!author.profile) throw new Error('Post author profile is missing.');
+
+    return {
+      id: author.id,
+      username: author.profile.username,
+      displayName: author.profile.displayName,
+      avatarUrl: author.profile.avatarUrl,
+      coverUrl: author.profile.coverUrl,
+      isVerified: author.emailVerified,
     };
   }
 }

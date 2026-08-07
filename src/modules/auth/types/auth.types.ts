@@ -1,5 +1,7 @@
 export interface GoogleUserData {
+  providerAccountId: string;
   email: string;
+  emailVerified: boolean;
   displayName: string;
   profilePhoto?: string;
 }
@@ -15,7 +17,7 @@ export interface LoginUser {
   email: string;
   username: string;
   displayName: string | null;
-  role: string;
+  role: UserRole;
 }
 
 export type RefreshResult =
@@ -27,3 +29,4 @@ export type RefreshResult =
       sessionId: string;
       refreshToken: string;
     };
+import type { UserRole } from '../../../prisma/generated/client';

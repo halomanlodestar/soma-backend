@@ -95,14 +95,13 @@ export class FollowService {
         follower: {
           select: {
             id: true,
-            username: true,
-            displayName: true,
-            role: true,
+            platformRole: true,
+            profile: { select: { username: true, displayName: true } },
           },
         },
       },
     });
-    return follows.map((f) => f.follower as FollowUserDto);
+    return follows.map((f) => this.toFollowUser(f.follower));
   }
 
   async getFollowing(userId: string): Promise<FollowUserDto[]> {
@@ -112,14 +111,13 @@ export class FollowService {
         following: {
           select: {
             id: true,
-            username: true,
-            displayName: true,
-            role: true,
+            platformRole: true,
+            profile: { select: { username: true, displayName: true } },
           },
         },
       },
     });
-    return follows.map((f) => f.following as FollowUserDto);
+    return follows.map((f) => this.toFollowUser(f.following));
   }
 
   async getFollowStatus(
@@ -135,5 +133,20 @@ export class FollowService {
       },
     });
     return { isFollowing: !!follow };
+  }
+
+  private toFollowUser(user: {
+    id: string;
+    platformRole: string;
+    profile: { username: string; displayName: string | null } | null;
+  }): FollowUserDto {
+    if (!user.profile) throw new NotFoundError('User profile not found');
+
+    return {
+      id: user.id,
+      username: user.profile.username,
+      displayName: user.profile.displayName,
+      role: user.platformRole,
+    };
   }
 }

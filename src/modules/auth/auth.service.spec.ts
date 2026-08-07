@@ -7,7 +7,16 @@ describe('AuthService refresh-token lifecycle', () => {
     email: 'user@example.com',
     username: 'user',
     displayName: 'User',
-    role: 'VIEWER',
+    role: 'VIEWER' as const,
+  };
+  const sessionUser = {
+    id: user.id,
+    email: user.email,
+    platformRole: user.role,
+    profile: {
+      username: user.username,
+      displayName: user.displayName,
+    },
   };
 
   const configService = {
@@ -21,6 +30,87 @@ describe('AuthService refresh-token lifecycle', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('creates an account, profile, and user from a new Google identity', async () => {
+    const createdUser = {
+      id: user.id,
+      email: user.email,
+      platformRole: user.role,
+      profile: sessionUser.profile,
+    };
+    const tx = { user: { create: jest.fn().mockResolvedValue(createdUser) } };
+    const prisma = {
+      authAccount: { findUnique: jest.fn().mockResolvedValue(null) },
+      userProfile: { findUnique: jest.fn().mockResolvedValue(null) },
+      $transaction: jest.fn((callback) => callback(tx)),
+    };
+    const service = new AuthService(
+      prisma as any,
+      jwtService as any,
+      configService as any,
+    );
+
+    const result = await service.validateGoogleUser({
+      providerAccountId: 'google-subject',
+      email: user.email,
+      emailVerified: true,
+      displayName: 'User',
+      profilePhoto: 'https://lh3.googleusercontent.com/avatar',
+    });
+
+    expect(result).toEqual(user);
+    expect(tx.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        email: user.email,
+        emailVerified: true,
+        platformRole: 'VIEWER',
+        profile: {
+          create: expect.objectContaining({
+            username: 'user',
+            avatarUrl: 'https://lh3.googleusercontent.com/avatar',
+          }),
+        },
+        authAccounts: {
+          create: expect.objectContaining({
+            provider: 'GOOGLE',
+            providerAccountId: 'google-subject',
+          }),
+        },
+      }),
+      include: { profile: true },
+    });
+  });
+
+  it('logs in through the existing Google account instead of matching by email', async () => {
+    const prisma = {
+      authAccount: {
+        findUnique: jest.fn().mockResolvedValue({ user: sessionUser }),
+      },
+    };
+    const service = new AuthService(
+      prisma as any,
+      jwtService as any,
+      configService as any,
+    );
+
+    const result = await service.validateGoogleUser({
+      providerAccountId: 'google-subject',
+      email: user.email,
+      emailVerified: true,
+      displayName: 'Changed Google Name',
+    });
+
+    expect(result).toEqual(user);
+    expect(prisma.authAccount.findUnique).toHaveBeenCalledWith({
+      where: {
+        provider_providerAccountId: {
+          provider: 'GOOGLE',
+          providerAccountId: 'google-subject',
+        },
+      },
+      include: { user: { include: { profile: true } } },
+    });
   });
 
   it('creates a 90-day session and a 30-day refresh token on login', async () => {
@@ -78,7 +168,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
-            user,
+            user: sessionUser,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -130,7 +220,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(now.getTime() + 65 * 24 * 60 * 60 * 1000),
-            user,
+            user: sessionUser,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -186,7 +276,7 @@ describe('AuthService refresh-token lifecycle', () => {
             id: 'session-id',
             revokedAt: null,
             expiresAt: new Date(Date.now() + 60_000),
-            user,
+            user: sessionUser,
           },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),

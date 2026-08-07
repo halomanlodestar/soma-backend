@@ -37,33 +37,45 @@ async function main() {
   console.log('Seeding Users...');
   const user1 = await prisma.user.create({
     data: {
-      username: 'alice_admin',
       email: 'alice@example.com',
-      displayName: 'Alice (Admin)',
-      role: UserRole.ADMIN,
-      isVerified: true,
-      bio: 'Administrator of Soma.',
+      platformRole: UserRole.ADMIN,
+      emailVerified: true,
+      profile: {
+        create: {
+          username: 'alice_admin',
+          displayName: 'Alice (Admin)',
+          bio: 'Administrator of Soma.',
+        },
+      },
     },
   });
 
   const user2 = await prisma.user.create({
     data: {
-      username: 'bob_creator',
       email: 'bob@example.com',
-      displayName: 'Bob The Creator',
-      role: UserRole.CREATOR,
-      isVerified: true,
-      bio: 'I make cool stuff.',
+      platformRole: UserRole.CREATOR,
+      emailVerified: true,
+      profile: {
+        create: {
+          username: 'bob_creator',
+          displayName: 'Bob The Creator',
+          bio: 'I make cool stuff.',
+        },
+      },
     },
   });
 
   const user3 = await prisma.user.create({
     data: {
-      username: 'charlie_viewer',
       email: 'charlie@example.com',
-      displayName: 'Charlie',
-      role: UserRole.VIEWER,
-      bio: 'Just looking around.',
+      platformRole: UserRole.VIEWER,
+      profile: {
+        create: {
+          username: 'charlie_viewer',
+          displayName: 'Charlie',
+          bio: 'Just looking around.',
+        },
+      },
     },
   });
 
