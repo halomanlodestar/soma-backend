@@ -177,13 +177,22 @@ type FeedSoma {
 }
 
 type FeedUser {
-  avatarUrl: String
   awards: [String]
+  emailVerified: Boolean!
+  id: ID!
+  profile: FeedUserProfile
+  stats: UserStats
+}
+
+type FeedUserProfile {
+  avatarUrl: String
   coverUrl: String
   displayName: String
-  id: ID!
-  isVerified: Boolean!
-  stats: UserStats
+  username: String!
+}
+
+type FollowProfileDto {
+  displayName: String
   username: String!
 }
 
@@ -199,10 +208,9 @@ type FollowStatus {
 }
 
 type FollowUserDto {
-  displayName: String
   id: ID!
-  role: String!
-  username: String!
+  platformRole: String!
+  profile: FollowProfileDto
 }
 
 type InvalidInputError {
@@ -559,20 +567,24 @@ type UploadIntentResponseDto {
   presignedUploadUrl: String!
 }
 
-type UserResponseDto {
+type UserProfileResponseDto {
   avatarUrl: String
-  awards: [String]
   bio: String
   coverUrl: String
-  createdAt: DateTime!
   displayName: String
+  username: String!
+}
+
+type UserResponseDto {
+  awards: [String]
+  createdAt: DateTime!
   email: String!
+  emailVerified: Boolean!
   id: ID!
-  isVerified: Boolean!
-  role: String!
+  platformRole: String!
+  profile: UserProfileResponseDto
   stats: UserStats
   updatedAt: DateTime!
-  username: String!
 }
 
 union UserResult = NotFoundError | UserResponseDto
