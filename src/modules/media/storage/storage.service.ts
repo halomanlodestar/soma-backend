@@ -13,10 +13,8 @@ export class StorageService {
   private readonly uploadUrlTtlSeconds: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.privateBucket = this.configService.getOrThrow<string>('S3_BUCKET');
-    this.publicBucket = this.configService.getOrThrow<string>(
-      'PUBLIC_S3_BUCKET',
-    );
+    this.privateBucket = this.getBucketName('S3_BUCKET');
+    this.publicBucket = this.getBucketName('PUBLIC_S3_BUCKET');
     this.publicAssetBaseUrl = this.configService
       .getOrThrow<string>('PUBLIC_ASSET_BASE_URL')
       .replace(/\/+$/, '');
@@ -28,9 +26,7 @@ export class StorageService {
       endpoint: this.configService.getOrThrow<string>('S3_ENDPOINT'),
       region: this.configService.getOrThrow<string>('S3_REGION'),
       accessKey: this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID'),
-      secretKey: this.configService.getOrThrow<string>(
-        'S3_SECRET_ACCESS_KEY',
-      ),
+      secretKey: this.configService.getOrThrow<string>('S3_SECRET_ACCESS_KEY'),
     });
     this.publicStorageClient = this.createClient({
       endpoint: this.configService.getOrThrow<string>('PUBLIC_S3_ENDPOINT'),
@@ -52,11 +48,12 @@ export class StorageService {
   ): Promise<PresignedUploadResult> {
     const extension = this.getExtensionFromFileName(fileName);
     const key = `staging/${userId}/${assetId}${extension}`;
-    const presignedUploadUrl = await this.privateStorageClient.presignedPutObject(
-      this.privateBucket,
-      key,
-      this.uploadUrlTtlSeconds,
-    );
+    const presignedUploadUrl =
+      await this.privateStorageClient.presignedPutObject(
+        this.privateBucket,
+        key,
+        this.uploadUrlTtlSeconds,
+      );
 
     return { presignedUploadUrl, key };
   }
@@ -82,6 +79,10 @@ export class StorageService {
       accessKey: config.accessKey,
       secretKey: config.secretKey,
     });
+  }
+
+  private getBucketName(key: 'S3_BUCKET' | 'PUBLIC_S3_BUCKET'): string {
+    return this.configService.getOrThrow<string>(key).toLowerCase();
   }
 
   private getExtensionFromFileName(fileName: string): string {
@@ -137,9 +138,7 @@ export class StorageService {
       typeof error === 'object' &&
       error !== null &&
       'code' in error &&
-      ['NoSuchKey', 'NoSuchObject', 'NotFound'].includes(
-        String(error.code),
-      )
+      ['NoSuchKey', 'NoSuchObject', 'NotFound'].includes(String(error.code))
     );
   }
 }
