@@ -6,7 +6,11 @@ import { NotificationsWorkerController } from './notifications-worker.controller
 
 @Module({
   controllers: [NotificationsWorkerController],
-  providers: [NotificationsService, NotificationsResolver, PrismaService],
+  providers: [
+    NotificationsService,
+    NotificationsResolver,
+    PrismaService,
+  ],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

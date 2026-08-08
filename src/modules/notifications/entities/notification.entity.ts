@@ -3,6 +3,7 @@ import type {
   Notification as PrismaNotification,
   Prisma,
 } from '../../../prisma/generated/client';
+import { GraphQLJSON } from '../../../common/scalars/json.scalar';
 
 @ObjectType()
 export class Notification implements PrismaNotification {
@@ -18,7 +19,7 @@ export class Notification implements PrismaNotification {
   @Field(() => String)
   eventType: string;
 
-  @Field(() => String)
+  @Field(() => GraphQLJSON)
   eventData: Prisma.JsonValue;
 
   sourceEventId: string;

@@ -217,6 +217,9 @@ type InvalidInputError {
   message: String!
 }
 
+"""Arbitrary JSON value"""
+scalar JSON
+
 type MediaCollection {
   createdAt: DateTime!
   id: ID!
@@ -284,7 +287,7 @@ type NotFoundError {
 type Notification {
   actorId: String
   createdAt: DateTime!
-  eventData: String!
+  eventData: JSON!
   eventType: String!
   id: ID!
   readAt: DateTime
