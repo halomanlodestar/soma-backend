@@ -285,22 +285,25 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       {
-        userId: user1.id,
-        type: 'COMMENT',
-        message: 'Bob commented on your post.',
-        postId: post1.id,
+        recipientId: user1.id,
+        actorId: user2.id,
+        eventType: 'comment.created.v1',
+        eventData: { resource: { type: 'post', id: post1.id } },
+        sourceEventId: 'seed:notification:comment:1',
       },
       {
-        userId: user2.id,
-        type: 'AWARD',
-        message: 'Alice gave you a Gold award!',
-        postId: post2.id,
+        recipientId: user2.id,
+        actorId: user1.id,
+        eventType: 'award.granted.v1',
+        eventData: { resource: { type: 'post', id: post2.id } },
+        sourceEventId: 'seed:notification:award:1',
       },
       {
-        userId: user3.id,
-        type: 'REPLY',
-        message: 'Alice replied to your comment.',
-        commentId: comment2.id,
+        recipientId: user3.id,
+        actorId: user1.id,
+        eventType: 'comment.reply.v1',
+        eventData: { resource: { type: 'comment', id: comment2.id } },
+        sourceEventId: 'seed:notification:reply:1',
       },
     ],
   });

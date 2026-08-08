@@ -29,11 +29,10 @@ describe('NotificationsService', () => {
   it('upserts the inbox notification with the event idempotency key', async () => {
     const event = {
       sourceEventId: 'evt-12345',
-      userId: 'usr-67890',
-      type: 'NEW_FOLLOWER',
-      message: 'You have a new follower',
-      postId: 'post-111',
-      commentId: undefined,
+      recipientId: 'usr-67890',
+      actorId: 'usr-11111',
+      eventType: 'follow.created.v1',
+      eventData: { resource: { type: 'user', id: 'usr-11111' } },
     };
     const notification = { id: 'notif-1', ...event, createdAt: new Date() };
     prismaService.notification.upsert.mockResolvedValue(notification);
@@ -49,11 +48,10 @@ describe('NotificationsService', () => {
   it('uses the same key when an event is delivered again', async () => {
     const event = {
       sourceEventId: 'evt-repeated-001',
-      userId: 'usr-99999',
-      type: 'POST_LIKED',
-      message: 'Someone liked your post',
-      postId: 'post-222',
-      commentId: 'comment-333',
+      recipientId: 'usr-99999',
+      actorId: 'usr-22222',
+      eventType: 'post.liked.v1',
+      eventData: { resource: { type: 'post', id: 'post-222' } },
     };
     const notification = { id: 'notif-2', ...event, createdAt: new Date() };
     prismaService.notification.upsert.mockResolvedValue(notification);
