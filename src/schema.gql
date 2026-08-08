@@ -282,15 +282,13 @@ type NotFoundError {
 }
 
 type Notification {
-  commentId: String
+  actorId: String
   createdAt: DateTime!
+  eventData: String!
+  eventType: String!
   id: ID!
-  message: String!
-  postId: String
   readAt: DateTime
-  sourceEventId: String
-  type: String!
-  userId: String!
+  recipientId: String!
 }
 
 union NotificationResult = NotFoundError | Notification | UnauthorizedError

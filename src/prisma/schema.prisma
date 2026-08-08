@@ -97,33 +97,34 @@ enum SomaAccessAuditAction {
 // MODELS
 
 model User {
-  id            String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email         String  @unique
-  emailVerified Boolean @default(false) @map("email_verified")
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
   platformRole  UserRole @default(VIEWER) @map("platform_role")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  profile       UserProfile?
-  authAccounts  AuthAccount[]
-  posts         Post[]         @relation("UserPosts")
-  comments      Comment[]      @relation("UserComments")
-  votes         Vote[]
-  awardsGiven   Award[]        @relation("awardedBy")
-  notifications Notification[]
-  authSessions  AuthSession[]
-  authHandoffs  AuthHandoff[]
+  profile                UserProfile?
+  authAccounts           AuthAccount[]
+  posts                  Post[]         @relation("UserPosts")
+  comments               Comment[]      @relation("UserComments")
+  votes                  Vote[]
+  awardsGiven            Award[]        @relation("awardedBy")
+  receivedNotifications  Notification[] @relation("NotificationRecipient")
+  triggeredNotifications Notification[] @relation("NotificationActor")
+  authSessions           AuthSession[]
+  authHandoffs           AuthHandoff[]
 
   followers Follow[] @relation("UserFollowers")
   following Follow[] @relation("UserFollowing")
 
-  somaMemberships         SomaMembership[]         @relation("SomaMember")
-  approvedSomaMemberships SomaMembership[]         @relation("SomaMembershipApprover")
-  somaApplications        SomaCreatorApplication[] @relation("SomaApplicationApplicant")
+  somaMemberships          SomaMembership[]         @relation("SomaMember")
+  approvedSomaMemberships  SomaMembership[]         @relation("SomaMembershipApprover")
+  somaApplications         SomaCreatorApplication[] @relation("SomaApplicationApplicant")
   reviewedSomaApplications SomaCreatorApplication[] @relation("SomaApplicationReviewer")
-  savedPosts              SavedPost[]
-  collections             Collection[]
+  savedPosts               SavedPost[]
+  collections              Collection[]
 
   @@map("users")
 }
@@ -225,19 +226,19 @@ model Follow {
 }
 
 model Soma {
-  id                 String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  slug               String  @unique
+  id                 String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  slug               String             @unique
   name               String
   description        String?
-  coverUrl           String? @map("cover_url")
-  memberCount        Int     @default(0) @map("member_count")
-  weeklyVisitorCount Int     @default(0) @map("weekly_visitor_count")
+  coverUrl           String?            @map("cover_url")
+  memberCount        Int                @default(0) @map("member_count")
+  weeklyVisitorCount Int                @default(0) @map("weekly_visitor_count")
   membershipMode     SomaMembershipMode @default(OPEN) @map("membership_mode")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  posts Post[]
+  posts               Post[]
   memberships         SomaMembership[]
   creatorApplications SomaCreatorApplication[]
 
@@ -251,12 +252,12 @@ model Post {
   excerpt  String?
   mediaUrl String? @map("media_url")
 
-  authorId    String         @map("author_id") @db.Uuid
-  somaId      String         @map("soma_id") @db.Uuid
-  creatorMembershipId String? @map("creator_membership_id") @db.Uuid
-  impressions Int            @default(0)
-  visibility  PostVisibility @default(DRAFT)
-  mediaStatus MediaProcessingStatus @default(NONE) @map("media_status")
+  authorId            String                @map("author_id") @db.Uuid
+  somaId              String                @map("soma_id") @db.Uuid
+  creatorMembershipId String?               @map("creator_membership_id") @db.Uuid
+  impressions         Int                   @default(0)
+  visibility          PostVisibility        @default(DRAFT)
+  mediaStatus         MediaProcessingStatus @default(NONE) @map("media_status")
 
   voteCount    Int   @default(0) @map("vote_count")
   commentCount Int   @default(0) @map("comment_count")
@@ -265,16 +266,15 @@ model Post {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  author User @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
-  soma   Soma @relation(fields: [somaId], references: [id], onDelete: Cascade)
+  author            User            @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  soma              Soma            @relation(fields: [somaId], references: [id], onDelete: Cascade)
   creatorMembership SomaMembership? @relation(fields: [creatorMembershipId], references: [id], onDelete: SetNull)
 
-  comments      Comment[]
-  media         MediaCollection?
-  votes         Vote[]
-  awards        Award[]
-  notifications Notification[]
-  savedBy       SavedPost[]
+  comments        Comment[]
+  media           MediaCollection?
+  votes           Vote[]
+  awards          Award[]
+  savedBy         SavedPost[]
   collectionItems CollectionItem[]
 
   @@index([visibility, hotScore, id])
@@ -341,9 +341,9 @@ model SomaMembership {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user       User  @relation("SomaMember", fields: [userId], references: [id], onDelete: Cascade)
-  soma       Soma  @relation(fields: [somaId], references: [id], onDelete: Cascade)
-  approvedBy User? @relation("SomaMembershipApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  user       User   @relation("SomaMember", fields: [userId], references: [id], onDelete: Cascade)
+  soma       Soma   @relation(fields: [somaId], references: [id], onDelete: Cascade)
+  approvedBy User?  @relation("SomaMembershipApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   posts      Post[]
 
   @@unique([userId, somaId])
@@ -356,18 +356,18 @@ model SomaCreatorApplication {
   applicantId String @map("applicant_id") @db.Uuid
   somaId      String @map("soma_id") @db.Uuid
 
-  portfolioUrls  String[] @default([]) @map("portfolio_urls")
-  disciplines    String[] @default([])
-  statement      String
-  processSamples String[] @default([]) @map("process_samples")
-  moderationConsent Boolean @map("moderation_consent")
+  portfolioUrls     String[] @default([]) @map("portfolio_urls")
+  disciplines       String[] @default([])
+  statement         String
+  processSamples    String[] @default([]) @map("process_samples")
+  moderationConsent Boolean  @map("moderation_consent")
 
   status       SomaCreatorApplicationStatus @default(SUBMITTED)
-  reviewerId   String?   @map("reviewer_id") @db.Uuid
-  reviewerNote String?   @map("reviewer_note")
-  reviewedAt   DateTime? @map("reviewed_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  reviewerId   String?                      @map("reviewer_id") @db.Uuid
+  reviewerNote String?                      @map("reviewer_note")
+  reviewedAt   DateTime?                    @map("reviewed_at")
+  createdAt    DateTime                     @default(now()) @map("created_at")
+  updatedAt    DateTime                     @updatedAt @map("updated_at")
 
   applicant User  @relation("SomaApplicationApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
   soma      Soma  @relation(fields: [somaId], references: [id], onDelete: Cascade)
@@ -379,13 +379,13 @@ model SomaCreatorApplication {
 }
 
 model SomaAccessAuditLog {
-  id           String @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  somaId       String @map("soma_id") @db.Uuid
-  actorId      String @map("actor_id") @db.Uuid
-  targetUserId String @map("target_user_id") @db.Uuid
+  id           String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  somaId       String                @map("soma_id") @db.Uuid
+  actorId      String                @map("actor_id") @db.Uuid
+  targetUserId String                @map("target_user_id") @db.Uuid
   action       SomaAccessAuditAction
   metadata     Json?
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
 
   @@index([somaId, createdAt])
   @@map("soma_access_audit_logs")
@@ -404,13 +404,12 @@ model Comment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  author        User           @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
-  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent        Comment?       @relation("CommentToComment", fields: [parentCommentId], references: [id], onDelete: Cascade)
-  children      Comment[]      @relation("CommentToComment")
-  votes         Vote[]
-  awards        Award[]
-  notifications Notification[]
+  author   User      @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentToComment", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  children Comment[] @relation("CommentToComment")
+  votes    Vote[]
+  awards   Award[]
 
   @@map("comments")
 }
@@ -502,22 +501,18 @@ model Award {
 }
 
 model Notification {
-  id     String @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  userId String @map("user_id") @db.Uuid
-  sourceEventId String? @unique @map("source_event_id")
+  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  recipientId   String    @map("recipient_id") @db.Uuid
+  actorId       String?   @map("actor_id") @db.Uuid
+  eventType     String    @map("event_type")
+  eventData     Json      @map("event_data")
+  sourceEventId String    @unique @map("source_event_id")
+  readAt        DateTime? @map("read_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  type    String // e.g. "COMMENT", "AWARD"
-  message String
+  recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
-  postId    String? @map("post_id") @db.Uuid
-  commentId String? @map("comment_id") @db.Uuid
-
-  readAt    DateTime? @map("read_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-
+  @@index([recipientId, createdAt])
   @@map("notifications")
 }

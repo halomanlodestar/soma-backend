@@ -1,8 +1,7 @@
 export type CreateNotificationEvent = {
   sourceEventId: string;
-  userId: string;
-  type: string;
-  message: string;
-  postId?: string;
-  commentId?: string;
+  recipientId: string;
+  actorId?: string;
+  eventType: string;
+  eventData: Record<string, unknown>;
 };

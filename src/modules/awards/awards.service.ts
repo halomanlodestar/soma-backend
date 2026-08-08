@@ -64,17 +64,20 @@ export class AwardsService {
       await lastValueFrom(
         this.notificationsClient.emit('notification.create', {
           sourceEventId: `award:${event.commandId}`,
-          userId: recipientOrError,
-          type: 'AWARD',
-          message: `You received a "${event.name}" award!`,
-          postId:
-            event.targetType === AwardTargetType.POST
-              ? event.targetId
-              : undefined,
-          commentId:
-            event.targetType === AwardTargetType.COMMENT
-              ? event.targetId
-              : undefined,
+          recipientId: recipientOrError,
+          actorId: event.userId,
+          eventType: 'award.granted.v1',
+          eventData: {
+            resource: { type: 'award', id: event.commandId },
+            context: {
+              targetType: event.targetType,
+              targetId: event.targetId,
+            },
+            template: {
+              key: 'notification.award.granted',
+              variables: { awardName: event.name },
+            },
+          },
         }),
       );
     }

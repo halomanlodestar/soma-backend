@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '../../prisma/generated/client';
 import { Notification } from './entities/notification.entity';
 import {
   NotFoundError,
@@ -13,32 +13,15 @@ import type { CreateNotificationEvent } from './types/notification-events.type';
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    createNotificationDto: CreateNotificationDto,
-  ): Promise<Notification> {
-    const { userId, type, message, postId, commentId } = createNotificationDto;
-
-    return this.prisma.notification.create({
-      data: {
-        userId,
-        type,
-        message,
-        postId,
-        commentId,
-      },
-    });
-  }
-
   async processCreate(event: CreateNotificationEvent): Promise<Notification> {
     const notification = await this.prisma.notification.upsert({
       where: { sourceEventId: event.sourceEventId },
       create: {
         sourceEventId: event.sourceEventId,
-        userId: event.userId,
-        type: event.type,
-        message: event.message,
-        postId: event.postId,
-        commentId: event.commentId,
+        recipientId: event.recipientId,
+        actorId: event.actorId,
+        eventType: event.eventType,
+        eventData: event.eventData as Prisma.InputJsonValue,
       },
       update: {},
     });
@@ -46,9 +29,9 @@ export class NotificationsService {
     return notification;
   }
 
-  async findAll(userId: string): Promise<Notification[]> {
+  async findAll(recipientId: string): Promise<Notification[]> {
     return this.prisma.notification.findMany({
-      where: { userId },
+      where: { recipientId },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -67,7 +50,7 @@ export class NotificationsService {
       );
     }
 
-    if (notification.userId !== userId) {
+    if (notification.recipientId !== userId) {
       return new UnauthorizedError('You can only read your own notifications');
     }
 

@@ -1,5 +1,8 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { Notification as PrismaNotification } from '../../../prisma/generated/client';
+import type {
+  Notification as PrismaNotification,
+  Prisma,
+} from '../../../prisma/generated/client';
 
 @ObjectType()
 export class Notification implements PrismaNotification {
@@ -7,22 +10,18 @@ export class Notification implements PrismaNotification {
   id: string;
 
   @Field(() => String)
-  userId: string;
+  recipientId: string;
 
   @Field(() => String, { nullable: true })
-  sourceEventId: string | null;
+  actorId: string | null;
 
   @Field(() => String)
-  type: string;
+  eventType: string;
 
   @Field(() => String)
-  message: string;
+  eventData: Prisma.JsonValue;
 
-  @Field(() => String, { nullable: true })
-  postId: string | null;
-
-  @Field(() => String, { nullable: true })
-  commentId: string | null;
+  sourceEventId: string;
 
   @Field(() => Date, { nullable: true })
   readAt: Date | null;

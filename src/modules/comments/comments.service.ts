@@ -95,11 +95,17 @@ export class CommentsService {
       await lastValueFrom(
         this.notificationsClient.emit('notification.create', {
           sourceEventId: `comment:${event.commandId}`,
-          userId: post.authorId,
-          type: 'COMMENT',
-          message: `Someone commented on your post: "${post.title}"`,
-          postId,
-          commentId: event.commandId,
+          recipientId: post.authorId,
+          actorId: event.userId,
+          eventType: 'comment.created.v1',
+          eventData: {
+            resource: { type: 'comment', id: event.commandId },
+            context: { postId },
+            template: {
+              key: 'notification.comment.created',
+              variables: { postTitle: post.title },
+            },
+          },
         }),
       );
     }
