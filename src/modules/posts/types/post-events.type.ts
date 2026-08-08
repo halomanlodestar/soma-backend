@@ -1,8 +1,6 @@
-import { CreateMediaItemDto } from '../dto/create-media-item.dto';
-
 export class ProcessMediaEvent {
   postId: string;
-  media?: CreateMediaItemDto[];
+  assetIds?: string[];
 }
 
 export class DeletePostEvent {

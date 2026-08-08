@@ -12,19 +12,17 @@ describe('PostsService', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    mediaAsset: { findMany: jest.fn() },
   };
   const client = { emit: jest.fn() };
   const membershipsService = { getActivePublishingMembership: jest.fn() };
-  const storageService = { isOwnedStagingKey: jest.fn().mockReturnValue(true) };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    storageService.isOwnedStagingKey.mockReturnValue(true);
     service = new PostsService(
       prisma as never,
       client as never,
       membershipsService as never,
-      storageService as never,
     );
   });
 
@@ -50,11 +48,12 @@ describe('PostsService', () => {
       id: 'post-id',
       visibility: 'DRAFT',
     });
+    prisma.mediaAsset.findMany.mockResolvedValue([{ id: 'asset-id' }]);
 
     await service.create('user-id', {
       title: 'Draft work',
       somaId: 'soma-id',
-      media: [{ key: 'staging/user/image.jpg', type: 'IMAGE' }],
+      media: [{ assetId: 'asset-id' }],
     });
 
     expect(prisma.post.create).toHaveBeenCalledWith({
@@ -66,7 +65,7 @@ describe('PostsService', () => {
     });
     expect(client.emit).toHaveBeenCalledWith('post.process_media', {
       postId: 'post-id',
-      media: [{ key: 'staging/user/image.jpg', type: 'IMAGE' }],
+      assetIds: ['asset-id'],
     });
   });
 });

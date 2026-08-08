@@ -47,6 +47,22 @@ enum MediaProcessingStatus {
   FAILED
 }
 
+enum MediaUploadPurpose {
+  POST_MEDIA
+  PROFILE_AVATAR
+  PROFILE_BANNER
+}
+
+enum MediaAssetStatus {
+  UPLOAD_PENDING
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  REJECTED
+  DELETED
+}
+
 enum PostVisibility {
   DRAFT
   SUBMITTED
@@ -125,6 +141,7 @@ model User {
   reviewedSomaApplications SomaCreatorApplication[] @relation("SomaApplicationReviewer")
   savedPosts               SavedPost[]
   collections              Collection[]
+  mediaAssets              MediaAsset[]            @relation("OwnedMediaAssets")
 
   @@map("users")
 }
@@ -137,10 +154,14 @@ model UserProfile {
   bio         String?
   avatarUrl   String?  @map("avatar_url")
   coverUrl    String?  @map("cover_url")
+  avatarAssetId String? @unique @map("avatar_asset_id") @db.Uuid
+  bannerAssetId String? @unique @map("banner_asset_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarAsset MediaAsset? @relation("ProfileAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  bannerAsset MediaAsset? @relation("ProfileBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
 
   @@map("user_profiles")
 }
@@ -276,9 +297,76 @@ model Post {
   awards          Award[]
   savedBy         SavedPost[]
   collectionItems CollectionItem[]
+  mediaAttachments PostMediaAttachment[]
 
   @@index([visibility, hotScore, id])
   @@map("posts")
+}
+
+model MediaAsset {
+  id              String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerId         String             @map("owner_id") @db.Uuid
+  purpose         MediaUploadPurpose
+  type            MediaType
+  status          MediaAssetStatus   @default(UPLOAD_PENDING)
+  stagingKey      String             @unique @map("staging_key")
+  fileName        String             @map("file_name")
+  declaredMimeType String             @map("declared_mime_type")
+  declaredByteSize BigInt             @map("declared_byte_size")
+  mimeType        String?            @map("mime_type")
+  byteSize        BigInt?            @map("byte_size")
+  checksum        String?
+  metadata        Json?
+  uploadedAt      DateTime?          @map("uploaded_at")
+  processedAt     DateTime?          @map("processed_at")
+  expiresAt       DateTime           @map("expires_at")
+  failureCode     String?            @map("failure_code")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  owner           User               @relation("OwnedMediaAssets", fields: [ownerId], references: [id], onDelete: Cascade)
+  variants        MediaAssetVariant[]
+  postAttachments PostMediaAttachment[]
+  avatarFor       UserProfile[]      @relation("ProfileAvatarAsset")
+  bannerFor       UserProfile[]      @relation("ProfileBannerAsset")
+
+  @@index([ownerId, status, createdAt])
+  @@index([status, expiresAt])
+  @@map("media_assets")
+}
+
+model MediaAssetVariant {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  assetId     String   @map("asset_id") @db.Uuid
+  name        String
+  storageKey  String   @unique @map("storage_key")
+  mimeType    String   @map("mime_type")
+  byteSize    BigInt?  @map("byte_size")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  asset       MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, name])
+  @@map("media_asset_variants")
+}
+
+model PostMediaAttachment {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  postId      String   @map("post_id") @db.Uuid
+  assetId     String   @map("asset_id") @db.Uuid
+  position    Int
+  altText     String?  @map("alt_text")
+  caption     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  asset       MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([postId, assetId])
+  @@unique([postId, position])
+  @@index([assetId])
+  @@map("post_media_attachments")
 }
 
 model SavedPost {

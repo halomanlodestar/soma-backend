@@ -4,7 +4,6 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SomaMembershipsService } from '../soma-memberships/soma-memberships.service';
 import { PostVisibility } from '../../prisma/generated/client';
-import { StorageService } from '../media/storage/storage.service';
 
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
@@ -22,7 +21,6 @@ export class PostsService {
     private readonly prisma: PrismaService,
     @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
     private readonly membershipsService: SomaMembershipsService,
-    private readonly storageService: StorageService,
   ) {}
 
   async create(
@@ -44,6 +42,7 @@ export class PostsService {
         userId,
         somaId,
       );
+
     if (!membership) {
       return new UnauthorizedError(
         'You need an active creator membership in this Soma to create work.',
@@ -51,13 +50,25 @@ export class PostsService {
     }
 
     const hasMedia = media && media.length > 0;
+    const assetIds = media?.map((item) => item.assetId) ?? [];
+    const assets = assetIds.length
+      ? await this.prisma.mediaAsset.findMany({
+          where: {
+            id: { in: assetIds },
+            ownerId: userId,
+            purpose: 'POST_MEDIA',
+            status: 'UPLOAD_PENDING',
+          },
+          select: { id: true },
+        })
+      : [];
+
     if (
-      media?.some(
-        (item) => !this.storageService.isOwnedStagingKey(userId, item.key),
-      )
+      assets.length !== assetIds.length ||
+      new Set(assetIds).size !== assetIds.length
     ) {
       return new InvalidInputError(
-        'Every media item must be uploaded by the post author.',
+        'Every media item must be a distinct pending post-media asset owned by you.',
       );
     }
 
@@ -76,7 +87,7 @@ export class PostsService {
     if (hasMedia) {
       this.client.emit('post.process_media', {
         postId: post.id,
-        media,
+        assetIds,
       });
     }
 

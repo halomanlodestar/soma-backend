@@ -11,7 +11,7 @@ describe('PostsWorkerController', () => {
       storage as never,
     );
 
-    await controller.handleProcessMedia({ postId: 'post-id', media: [] });
+    await controller.handleProcessMedia({ postId: 'post-id', assetIds: [] });
 
     expect(prisma.post.update).toHaveBeenCalledWith({
       where: { id: 'post-id' },

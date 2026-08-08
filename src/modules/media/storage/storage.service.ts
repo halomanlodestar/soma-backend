@@ -9,7 +9,6 @@ import {
   NotFound,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomBytes } from 'crypto';
 import type { PresignedUploadResult } from '../types/media.types';
 
 @Injectable()
@@ -42,6 +41,7 @@ export class StorageService {
         ),
       },
     });
+
     this.publicS3Client = new S3Client({
       region: this.configService.getOrThrow<string>('PUBLIC_S3_REGION'),
       endpoint: this.configService.getOrThrow<string>('PUBLIC_S3_ENDPOINT'),
@@ -58,13 +58,12 @@ export class StorageService {
 
   async generatePresignedUploadUrl(
     userId: string,
+    assetId: string,
     fileName: string,
     mimeType: string,
   ): Promise<PresignedUploadResult> {
-    const timestamp = Date.now();
-    const random = randomBytes(8).toString('hex');
     const extension = this.getExtensionFromFileName(fileName);
-    const key = `staging/${userId}/${timestamp}-${random}${extension}`;
+    const key = `staging/${userId}/${assetId}${extension}`;
 
     const command = new PutObjectCommand({
       Bucket: this.privateBucket,
@@ -80,11 +79,8 @@ export class StorageService {
       },
     );
 
-    const finalPublicUrl = this.buildPublicUrl(this.getPublishedKey(key));
-
     return {
       presignedUploadUrl,
-      finalPublicUrl,
       key,
     };
   }
@@ -107,11 +103,13 @@ export class StorageService {
       await this.privateS3Client.send(
         new HeadObjectCommand({ Bucket: this.privateBucket, Key: key }),
       );
+
       return true;
     } catch (err) {
       if (err instanceof NotFound) {
         return false;
       }
+
       throw err;
     }
   }

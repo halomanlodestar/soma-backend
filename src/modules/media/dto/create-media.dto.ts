@@ -1,16 +1,41 @@
-import { IsString, IsNotEmpty, IsEnum, IsUUID } from 'class-validator';
-import { InputType, ObjectType, Field } from '@nestjs/graphql';
-import { MediaType } from '../../../prisma/generated/client';
+import {
+  IsInt,
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  IsUUID,
+  Min,
+} from 'class-validator';
+import {
+  InputType,
+  ObjectType,
+  Field,
+  ID,
+  Int,
+  registerEnumType,
+} from '@nestjs/graphql';
+import {
+  MediaType,
+  MediaUploadPurpose,
+} from '../../../prisma/generated/client';
+
+registerEnumType(MediaUploadPurpose, { name: 'MediaUploadPurpose' });
+registerEnumType(MediaType, { name: 'MediaType' });
 
 @InputType()
 export class UploadIntentDto {
-  @Field(() => String)
-  @IsUUID()
-  @IsNotEmpty()
-  somaId: string;
+  @Field(() => MediaUploadPurpose)
+  @IsEnum(MediaUploadPurpose)
+  purpose: MediaUploadPurpose;
 
-  @Field(() => String)
-  @IsEnum(['IMAGE', 'VIDEO', 'AUDIO'])
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  somaId?: string;
+
+  @Field(() => MediaType)
+  @IsEnum(MediaType)
   @IsNotEmpty()
   mediaType: MediaType;
 
@@ -23,15 +48,20 @@ export class UploadIntentDto {
   @IsString()
   @IsNotEmpty()
   fileName: string;
+
+  @Field(() => Int)
+  @IsInt()
+  @Min(1)
+  byteSize: number;
 }
 
 @ObjectType()
 export class UploadIntentResponseDto {
-  @Field(() => String)
-  presignedUploadUrl: string;
+  @Field(() => ID)
+  assetId: string;
 
   @Field(() => String)
-  finalPublicUrl: string;
+  presignedUploadUrl: string;
 
   @Field(() => String)
   key: string;

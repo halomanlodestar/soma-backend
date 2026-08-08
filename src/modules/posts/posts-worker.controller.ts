@@ -16,9 +16,9 @@ export class PostsWorkerController {
 
   @EventPattern('post.process_media')
   async handleProcessMedia(@Payload() data: ProcessMediaEvent): Promise<void> {
-    const { postId, media } = data;
+    const { postId, assetIds } = data;
 
-    if (!media || media.length === 0) {
+    if (!assetIds || assetIds.length === 0) {
       await this.prisma.post.update({
         where: { id: postId },
         data: { mediaStatus: 'READY' },
@@ -26,12 +26,34 @@ export class PostsWorkerController {
       return;
     }
 
-    for (const item of media) {
-      const exists = await this.storageService.verifyKeyExists(item.key);
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorId: true },
+    });
+
+    if (!post) return;
+
+    const assets = await this.prisma.mediaAsset.findMany({
+      where: {
+        id: { in: assetIds },
+        ownerId: post.authorId,
+        purpose: 'POST_MEDIA',
+        status: 'UPLOAD_PENDING',
+      },
+    });
+
+    if (assets.length !== assetIds.length) {
+      throw new Error(`Invalid media assets for post ${postId}.`);
+    }
+
+    for (const asset of assets) {
+      const exists = await this.storageService.verifyKeyExists(
+        asset.stagingKey,
+      );
 
       if (!exists) {
         throw new Error(
-          `S3 key not found: ${item.key} (postId: ${postId}). Event will retry.`,
+          `S3 key not found: ${asset.stagingKey} (postId: ${postId}). Event will retry.`,
         );
       }
     }
@@ -41,14 +63,31 @@ export class PostsWorkerController {
         data: {
           postId,
           items: {
-            create: media.map((item) => ({
-              type: item.type,
-              s3Key: item.key,
+            create: assets.map((asset) => ({
+              type: asset.type,
+              s3Key: asset.stagingKey,
               originalUrl: this.storageService.buildPublicUrl(
-                this.storageService.getPublishedKey(item.key),
+                this.storageService.getPublishedKey(asset.stagingKey),
               ),
             })),
           },
+        },
+      });
+
+      await tx.postMediaAttachment.createMany({
+        data: assetIds.map((assetId, position) => ({
+          postId,
+          assetId,
+          position,
+        })),
+      });
+
+      await tx.mediaAsset.updateMany({
+        where: { id: { in: assetIds } },
+        data: {
+          status: 'READY',
+          uploadedAt: new Date(),
+          processedAt: new Date(),
         },
       });
 
@@ -67,6 +106,7 @@ export class PostsWorkerController {
       where: { id: data.postId },
       include: { media: { include: { items: true } } },
     });
+
     if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY')
       return;
 
@@ -74,6 +114,7 @@ export class PostsWorkerController {
       const publishedKey = await this.storageService.publishStagedObject(
         item.s3Key,
       );
+
       await this.prisma.mediaItem.update({
         where: { id: item.id },
         data: {
@@ -81,8 +122,10 @@ export class PostsWorkerController {
           originalUrl: this.storageService.buildPublicUrl(publishedKey),
         },
       });
+
       await this.storageService.deleteStagedObject(item.s3Key);
     }
+
     await this.prisma.post.update({
       where: { id: post.id },
       data: { visibility: 'PUBLISHED' },

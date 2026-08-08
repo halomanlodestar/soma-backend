@@ -1,16 +1,20 @@
-import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { InputType, Field } from '@nestjs/graphql';
-import { MediaType } from '../../../prisma/generated/client';
 
 @InputType()
 export class CreateMediaItemDto {
   @Field(() => String)
-  @IsEnum(['IMAGE', 'VIDEO', 'AUDIO'])
+  @IsUUID()
   @IsNotEmpty()
-  type: MediaType;
+  assetId: string;
 
-  @Field(() => String)
+  @Field(() => String, { nullable: true })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  key: string;
+  altText?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  caption?: string;
 }
