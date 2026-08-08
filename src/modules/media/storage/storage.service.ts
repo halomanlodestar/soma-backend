@@ -110,21 +110,11 @@ export class StorageService {
 
   async publishStagedObject(stagingKey: string): Promise<string> {
     const publishedKey = this.getPublishedKey(stagingKey);
-    const stagedObject = await this.privateStorageClient.statObject(
-      this.privateBucket,
-      stagingKey,
-    );
-    const stagedStream = await this.privateStorageClient.getObject(
-      this.privateBucket,
-      stagingKey,
-    );
 
-    await this.publicStorageClient.putObject(
+    await this.publicStorageClient.copyObject(
       this.publicBucket,
       publishedKey,
-      stagedStream,
-      stagedObject.size,
-      stagedObject.metaData,
+      `/${this.privateBucket}/${stagingKey}`,
     );
     await this.publicStorageClient.statObject(this.publicBucket, publishedKey);
 
