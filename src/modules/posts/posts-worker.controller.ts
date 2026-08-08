@@ -102,45 +102,17 @@ export class PostsWorkerController {
 
   @EventPattern('post.publish')
   async handlePublishPost(@Payload() data: { postId: string }): Promise<void> {
-    this.logger.log(`Publish event received for post ${data.postId}.`);
-
     const post = await this.prisma.post.findUnique({
       where: { id: data.postId },
       include: { media: { include: { items: true } } },
     });
 
-    if (!post) {
-      this.logger.warn(`Publish skipped: post ${data.postId} was not found.`);
+    if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY')
       return;
-    }
-
-    if (post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY') {
-      this.logger.warn(
-        `Publish skipped for post ${post.id}: visibility=${post.visibility}, mediaStatus=${post.mediaStatus}.`,
-      );
-      return;
-    }
 
     for (const item of post.media?.items ?? []) {
-      this.logger.log(
-        `Promoting media item ${item.id} for post ${post.id}: ${item.s3Key}.`,
-      );
-
-      let publishedKey: string;
-      try {
-        publishedKey = await this.storageService.publishStagedObject(
-          item.s3Key,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Failed to promote media item ${item.id} for post ${post.id}: ${item.s3Key}.`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        throw error;
-      }
-
-      this.logger.log(
-        `Promoted media item ${item.id} for post ${post.id}: ${publishedKey}.`,
+      const publishedKey = await this.storageService.publishStagedObject(
+        item.s3Key,
       );
 
       await this.prisma.mediaItem.update({
@@ -150,21 +122,14 @@ export class PostsWorkerController {
           originalUrl: this.storageService.buildPublicUrl(publishedKey),
         },
       });
-      this.logger.log(
-        `Updated media item ${item.id} with published key for post ${post.id}.`,
-      );
 
       await this.storageService.deleteStagedObject(item.s3Key);
-      this.logger.log(
-        `Deleted staging object ${item.s3Key} for post ${post.id}.`,
-      );
     }
 
     await this.prisma.post.update({
       where: { id: post.id },
       data: { visibility: 'PUBLISHED' },
     });
-    this.logger.log(`Post ${post.id} published.`);
   }
 
   @EventPattern('post.delete')
