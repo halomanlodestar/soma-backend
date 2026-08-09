@@ -129,10 +129,12 @@ export class StorageService {
         bucket: this.privateBucket,
         key: stagingKey,
       });
+
       throw error;
     }
 
     let body: Buffer;
+
     try {
       body = await this.readStream(stagedStream);
     } catch (error) {
@@ -140,6 +142,7 @@ export class StorageService {
         bucket: this.privateBucket,
         key: stagingKey,
       });
+
       throw error;
     }
 
@@ -162,6 +165,7 @@ export class StorageService {
         contentLength: body.length,
         contentType,
       });
+
       throw error;
     }
 
