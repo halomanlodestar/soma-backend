@@ -1,8 +1,14 @@
 import { Controller, Inject, Logger } from '@nestjs/common';
 import { ClientProxy, EventPattern, Payload } from '@nestjs/microservices';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { MediaAsset } from '../../prisma/generated/client';
 import { QueryCacheService } from '../../common/cache/query-cache.service';
 import { StorageService } from '../media/storage/storage.service';
+import {
+  MediaMetadataError,
+  type MediaMetadata,
+  MediaMetadataService,
+} from '../media/media-metadata.service';
 
 import { ProcessMediaEvent, DeletePostEvent } from './types/post-events.type';
 
@@ -13,6 +19,7 @@ export class PostsWorkerController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly mediaMetadataService: MediaMetadataService,
     @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
     private readonly queryCache: QueryCacheService,
   ) {}
@@ -52,16 +59,48 @@ export class PostsWorkerController {
       throw new Error(`Invalid media assets for post ${postId}.`);
     }
 
-    for (const asset of assets) {
-      const exists = await this.storageService.verifyKeyExists(
-        asset.stagingKey,
-      );
-
-      if (!exists) {
-        throw new Error(
-          `S3 key not found: ${asset.stagingKey} (postId: ${postId}). Event will retry.`,
+    const processedAssets: Array<{
+      asset: MediaAsset;
+      metadata: MediaMetadata;
+    }> = [];
+    try {
+      for (const asset of assets) {
+        const exists = await this.storageService.verifyKeyExists(
+          asset.stagingKey,
         );
+
+        if (!exists) {
+          throw new Error(
+            `S3 key not found: ${asset.stagingKey} (postId: ${postId}). Event will retry.`,
+          );
+        }
+
+        const metadata = await this.mediaMetadataService.extract({
+          stagingKey: asset.stagingKey,
+          expectedType: asset.type,
+          declaredMimeType: asset.declaredMimeType,
+          expectedByteSize: Number(asset.declaredByteSize),
+        });
+        processedAssets.push({ asset, metadata });
       }
+    } catch (error) {
+      if (error instanceof MediaMetadataError) {
+        await this.prisma.$transaction([
+          this.prisma.mediaAsset.updateMany({
+            where: { id: { in: assetIds }, status: 'UPLOAD_PENDING' },
+            data: { status: 'FAILED', failureCode: error.code },
+          }),
+          this.prisma.post.updateMany({
+            where: { id: postId, visibility: 'DRAFT' },
+            data: { mediaStatus: 'FAILED' },
+          }),
+        ]);
+        this.logger.warn(
+          `Media processing rejected for post ${postId}: ${error.code}.`,
+        );
+        return;
+      }
+      throw error;
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -69,12 +108,13 @@ export class PostsWorkerController {
         data: {
           postId,
           items: {
-            create: assets.map((asset) => ({
+            create: processedAssets.map(({ asset, metadata }) => ({
               type: asset.type,
               s3Key: asset.stagingKey,
               originalUrl: this.storageService.buildPublicUrl(
                 this.storageService.getPublishedKey(asset.stagingKey),
               ),
+              metadata: metadata.metadata,
             })),
           },
         },
@@ -88,14 +128,22 @@ export class PostsWorkerController {
         })),
       });
 
-      await tx.mediaAsset.updateMany({
-        where: { id: { in: assetIds } },
-        data: {
-          status: 'READY',
-          uploadedAt: new Date(),
-          processedAt: new Date(),
-        },
-      });
+      await Promise.all(
+        processedAssets.map(({ asset, metadata }) =>
+          tx.mediaAsset.update({
+            where: { id: asset.id },
+            data: {
+              status: 'READY',
+              mimeType: metadata.mimeType,
+              byteSize: BigInt(metadata.byteSize),
+              checksum: metadata.checksum,
+              metadata: metadata.metadata,
+              uploadedAt: new Date(),
+              processedAt: new Date(),
+            },
+          }),
+        ),
+      );
 
       await tx.post.update({
         where: { id: postId },

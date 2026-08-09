@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Client } from 'minio';
+import { BucketItemStat, Client } from 'minio';
 import { Readable } from 'node:stream';
 import type { PresignedUploadResult } from '../types/media.types';
 
@@ -101,9 +101,34 @@ export class StorageService {
     }
   }
 
+  async getStagedObject(key: string): Promise<Readable> {
+    try {
+      return await this.privateClient.getObject(this.privateBucket, key);
+    } catch (error) {
+      this.logStorageFailure('get staged object for metadata probing', error, {
+        bucket: this.privateBucket,
+        key,
+      });
+      throw error;
+    }
+  }
+
+  async getStagedObjectSize(key: string): Promise<number> {
+    try {
+      const object = await this.privateClient.statObject(this.privateBucket, key);
+      return object.size;
+    } catch (error) {
+      this.logStorageFailure('stat staged object for metadata probing', error, {
+        bucket: this.privateBucket,
+        key,
+      });
+      throw error;
+    }
+  }
+
   async publishStagedObject(stagingKey: string): Promise<string> {
     const publishedKey = this.getPublishedKey(stagingKey);
-    let stagedObject;
+    let stagedObject: BucketItemStat;
 
     try {
       stagedObject = await this.privateClient.statObject(
@@ -115,10 +140,12 @@ export class StorageService {
         bucket: this.privateBucket,
         key: stagingKey,
       });
+
       throw error;
     }
 
     let stagedStream: Readable;
+
     try {
       stagedStream = await this.privateClient.getObject(
         this.privateBucket,
@@ -146,7 +173,7 @@ export class StorageService {
       throw error;
     }
 
-    const contentType = stagedObject.metaData['content-type'];
+    const contentType = stagedObject.metaData['content-type'] as string;
 
     try {
       await this.publicClient.putObject(
