@@ -1,21 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  S3Client,
-  PutObjectCommand,
-  HeadObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-  NotFound,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Client } from 'minio';
+import { Readable } from 'node:stream';
 import type { PresignedUploadResult } from '../types/media.types';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly privateS3Client: S3Client;
-  private readonly publicS3Client: S3Client;
+  private readonly privateClient: Client;
+  private readonly publicClient: Client;
   private readonly privateBucket: string;
   private readonly publicBucket: string;
   private readonly publicAssetBaseUrl: string;
@@ -32,28 +25,15 @@ export class StorageService {
       'MEDIA_UPLOAD_URL_TTL_SECONDS',
     );
 
-    this.privateS3Client = new S3Client({
-      region: this.configService.getOrThrow<string>('S3_REGION'),
-      endpoint: this.configService.getOrThrow<string>('S3_ENDPOINT'),
-      credentials: {
-        accessKeyId: this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.getOrThrow<string>(
-          'S3_SECRET_ACCESS_KEY',
-        ),
-      },
+    this.privateClient = this.createClient({
+      endpointKey: 'S3_ENDPOINT',
+      accessKeyIdKey: 'S3_ACCESS_KEY_ID',
+      secretAccessKeyKey: 'S3_SECRET_ACCESS_KEY',
     });
-
-    this.publicS3Client = new S3Client({
-      region: this.configService.getOrThrow<string>('PUBLIC_S3_REGION'),
-      endpoint: this.configService.getOrThrow<string>('PUBLIC_S3_ENDPOINT'),
-      credentials: {
-        accessKeyId: this.configService.getOrThrow<string>(
-          'PUBLIC_S3_ACCESS_KEY_ID',
-        ),
-        secretAccessKey: this.configService.getOrThrow<string>(
-          'PUBLIC_S3_SECRET_ACCESS_KEY',
-        ),
-      },
+    this.publicClient = this.createClient({
+      endpointKey: 'PUBLIC_S3_ENDPOINT',
+      accessKeyIdKey: 'PUBLIC_S3_ACCESS_KEY_ID',
+      secretAccessKeyKey: 'PUBLIC_S3_SECRET_ACCESS_KEY',
     });
   }
 
@@ -61,29 +41,41 @@ export class StorageService {
     userId: string,
     assetId: string,
     fileName: string,
-    mimeType: string,
+    _mimeType: string,
   ): Promise<PresignedUploadResult> {
     const extension = this.getExtensionFromFileName(fileName);
     const key = `staging/${userId}/${assetId}${extension}`;
-
-    const command = new PutObjectCommand({
-      Bucket: this.privateBucket,
-      Key: key,
-      ContentType: mimeType,
-    });
-
-    const presignedUploadUrl = await getSignedUrl(
-      this.privateS3Client,
-      command,
-      {
-        expiresIn: this.uploadUrlTtlSeconds,
-      },
+    const presignedUploadUrl = await this.privateClient.presignedPutObject(
+      this.privateBucket,
+      key,
+      this.uploadUrlTtlSeconds,
     );
 
-    return {
-      presignedUploadUrl,
-      key,
-    };
+    return { presignedUploadUrl, key };
+  }
+
+  private createClient(config: {
+    endpointKey: string;
+    accessKeyIdKey: string;
+    secretAccessKeyKey: string;
+  }): Client {
+    const endpoint = new URL(
+      this.configService.getOrThrow<string>(config.endpointKey),
+    );
+
+    if (endpoint.protocol !== 'https:' && endpoint.protocol !== 'http:') {
+      throw new Error(`Unsupported S3 endpoint protocol: ${endpoint.protocol}`);
+    }
+
+    return new Client({
+      endPoint: endpoint.hostname,
+      ...(endpoint.port ? { port: Number(endpoint.port) } : {}),
+      useSSL: endpoint.protocol === 'https:',
+      accessKey: this.configService.getOrThrow<string>(config.accessKeyIdKey),
+      secretKey: this.configService.getOrThrow<string>(
+        config.secretAccessKeyKey,
+      ),
+    });
   }
 
   private getExtensionFromFileName(fileName: string): string {
@@ -101,17 +93,11 @@ export class StorageService {
 
   async verifyKeyExists(key: string): Promise<boolean> {
     try {
-      await this.privateS3Client.send(
-        new HeadObjectCommand({ Bucket: this.privateBucket, Key: key }),
-      );
-
+      await this.privateClient.statObject(this.privateBucket, key);
       return true;
-    } catch (err) {
-      if (err instanceof NotFound) {
-        return false;
-      }
-
-      throw err;
+    } catch (error) {
+      if (this.isMissingObjectError(error)) return false;
+      throw error;
     }
   }
 
@@ -120,31 +106,52 @@ export class StorageService {
     let stagedObject;
 
     try {
-      stagedObject = await this.privateS3Client.send(
-        new GetObjectCommand({ Bucket: this.privateBucket, Key: stagingKey }),
+      stagedObject = await this.privateClient.statObject(
+        this.privateBucket,
+        stagingKey,
+      );
+    } catch (error) {
+      this.logStorageFailure('stat staged object for publication', error, {
+        bucket: this.privateBucket,
+        key: stagingKey,
+      });
+      throw error;
+    }
+
+    let stagedStream: Readable;
+    try {
+      stagedStream = await this.privateClient.getObject(
+        this.privateBucket,
+        stagingKey,
       );
     } catch (error) {
       this.logStorageFailure('get staged object for publication', error, {
         bucket: this.privateBucket,
         key: stagingKey,
       });
-
       throw error;
     }
 
-    if (!stagedObject.Body) {
-      throw new Error(`Storage object ${stagingKey} has no body`);
+    let body: Buffer;
+    try {
+      body = await this.readStream(stagedStream);
+    } catch (error) {
+      this.logStorageFailure('read staged object for publication', error, {
+        bucket: this.privateBucket,
+        key: stagingKey,
+      });
+      throw error;
     }
 
+    const contentType = stagedObject.metaData['content-type'];
+
     try {
-      await this.publicS3Client.send(
-        new PutObjectCommand({
-          Bucket: this.publicBucket,
-          Key: publishedKey,
-          Body: stagedObject.Body,
-          ContentType: stagedObject.ContentType,
-          ContentLength: stagedObject.ContentLength,
-        }),
+      await this.publicClient.putObject(
+        this.publicBucket,
+        publishedKey,
+        body,
+        body.length,
+        contentType ? { 'Content-Type': contentType } : undefined,
       );
     } catch (error) {
       this.logStorageFailure('put published object', error, {
@@ -152,14 +159,41 @@ export class StorageService {
         key: publishedKey,
         sourceBucket: this.privateBucket,
         sourceKey: stagingKey,
-        contentLength: stagedObject.ContentLength,
-        contentType: stagedObject.ContentType,
+        contentLength: body.length,
+        contentType,
       });
-
       throw error;
     }
 
     return publishedKey;
+  }
+
+  async deleteStagedObject(key: string): Promise<void> {
+    await this.privateClient.removeObject(this.privateBucket, key);
+  }
+
+  async deletePublishedObject(key: string): Promise<void> {
+    await this.publicClient.removeObject(this.publicBucket, key);
+  }
+
+  buildPublicUrl(key: string): string {
+    return `${this.publicAssetBaseUrl}/${key}`;
+  }
+
+  private readStream(stream: Readable): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: Buffer | Uint8Array | string) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      stream.once('error', reject);
+      stream.once('end', () => resolve(Buffer.concat(chunks)));
+    });
+  }
+
+  private isMissingObjectError(error: unknown): boolean {
+    const code = (error as { code?: string }).code;
+    return code === 'NoSuchKey' || code === 'NotFound';
   }
 
   private logStorageFailure(
@@ -167,40 +201,22 @@ export class StorageService {
     error: unknown,
     context: Record<string, string | number | undefined>,
   ): void {
-    const s3Error = error as {
+    const storageError = error as {
       name?: string;
-      Code?: string;
-      $metadata?: {
-        httpStatusCode?: number;
-        requestId?: string;
-        extendedRequestId?: string;
-      };
+      code?: string;
+      statusCode?: number;
+      requestid?: string;
+      hostid?: string;
     };
 
     this.logger.error({
-      message: `S3 ${operation} failed`,
+      message: `Storage ${operation} failed`,
       ...context,
-      errorName: s3Error.name,
-      errorCode: s3Error.Code,
-      httpStatusCode: s3Error.$metadata?.httpStatusCode,
-      requestId: s3Error.$metadata?.requestId,
-      extendedRequestId: s3Error.$metadata?.extendedRequestId,
+      errorName: storageError.name,
+      errorCode: storageError.code,
+      httpStatusCode: storageError.statusCode,
+      requestId: storageError.requestid,
+      extendedRequestId: storageError.hostid,
     });
-  }
-
-  async deleteStagedObject(key: string): Promise<void> {
-    await this.privateS3Client.send(
-      new DeleteObjectCommand({ Bucket: this.privateBucket, Key: key }),
-    );
-  }
-
-  async deletePublishedObject(key: string): Promise<void> {
-    await this.publicS3Client.send(
-      new DeleteObjectCommand({ Bucket: this.publicBucket, Key: key }),
-    );
-  }
-
-  buildPublicUrl(key: string): string {
-    return `${this.publicAssetBaseUrl}/${key}`;
   }
 }
