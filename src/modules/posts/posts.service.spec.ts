@@ -39,7 +39,7 @@ describe('PostsService', () => {
     expect(prisma.post.create).not.toHaveBeenCalled();
   });
 
-  it('creates a draft and queues media verification without publishing it', async () => {
+  it('creates a draft and queues media processing', async () => {
     prisma.soma.findUnique.mockResolvedValue({ id: 'soma-id' });
     membershipsService.getActivePublishingMembership.mockResolvedValue({
       id: 'membership-id',
@@ -66,6 +66,24 @@ describe('PostsService', () => {
     expect(client.emit).toHaveBeenCalledWith('post.process_media', {
       postId: 'post-id',
       assetIds: ['asset-id'],
+    });
+  });
+
+  it('queues processing for a post without media so it can auto-publish', async () => {
+    prisma.soma.findUnique.mockResolvedValue({ id: 'soma-id' });
+    membershipsService.getActivePublishingMembership.mockResolvedValue({
+      id: 'membership-id',
+    });
+    prisma.post.create.mockResolvedValue({ id: 'post-id' });
+
+    await service.create('user-id', {
+      title: 'Text work',
+      somaId: 'soma-id',
+    });
+
+    expect(client.emit).toHaveBeenCalledWith('post.process_media', {
+      postId: 'post-id',
+      assetIds: [],
     });
   });
 });

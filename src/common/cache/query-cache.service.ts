@@ -23,4 +23,8 @@ export class QueryCacheService {
 
     return value;
   }
+
+  async invalidate(key: string): Promise<void> {
+    await this.cache.del(key);
+  }
 }

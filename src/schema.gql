@@ -103,8 +103,9 @@ input CreateCommentDto {
 }
 
 input CreateMediaItemDto {
-  key: String!
-  type: String!
+  altText: String
+  assetId: String!
+  caption: String
 }
 
 input CreatePostDto {
@@ -242,6 +243,18 @@ enum MediaProcessingStatus {
   READY
 }
 
+enum MediaType {
+  AUDIO
+  IMAGE
+  VIDEO
+}
+
+enum MediaUploadPurpose {
+  POST_MEDIA
+  PROFILE_AVATAR
+  PROFILE_BANNER
+}
+
 type Mutation {
   addPostToCollection(input: CollectionPostInput!): CollectionItem
   createAward(data: CreateAwardDto!): AwardResult!
@@ -268,7 +281,6 @@ type Mutation {
   savePost(postId: String!): Boolean!
   setSomaMembershipRole(input: SetSomaMembershipRoleInput!): SomaMembership!
   setSomaMembershipStatus(input: SetSomaMembershipStatusInput!): SomaMembership!
-  submitPost(id: String!): PostResult!
   submitSomaCreatorApplication(input: SubmitSomaCreatorApplicationInput!): SomaCreatorApplicationResult!
   unfollow(userId: String!): FollowResponse!
   unsavePost(postId: String!): Boolean!
@@ -556,14 +568,16 @@ input UpdateUserProfileDto {
 }
 
 input UploadIntentDto {
+  byteSize: Int!
   fileName: String!
-  mediaType: String!
+  mediaType: MediaType!
   mimeType: String!
-  somaId: String!
+  purpose: MediaUploadPurpose!
+  somaId: String
 }
 
 type UploadIntentResponseDto {
-  finalPublicUrl: String!
+  assetId: ID!
   key: String!
   presignedUploadUrl: String!
 }

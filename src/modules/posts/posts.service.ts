@@ -51,17 +51,22 @@ export class PostsService {
 
     const hasMedia = media && media.length > 0;
     const assetIds = media?.map((item) => item.assetId) ?? [];
-    const assets = assetIds.length
-      ? await this.prisma.mediaAsset.findMany({
-          where: {
-            id: { in: assetIds },
-            ownerId: userId,
-            purpose: 'POST_MEDIA',
-            status: 'UPLOAD_PENDING',
-          },
-          select: { id: true },
-        })
-      : [];
+
+    let assets: {
+      id: string;
+    }[] = [];
+
+    if (assetIds.length) {
+      assets = await this.prisma.mediaAsset.findMany({
+        where: {
+          id: { in: assetIds },
+          ownerId: userId,
+          purpose: 'POST_MEDIA',
+          status: 'UPLOAD_PENDING',
+        },
+        select: { id: true },
+      });
+    }
 
     if (
       assets.length !== assetIds.length ||
@@ -84,12 +89,10 @@ export class PostsService {
       },
     });
 
-    if (hasMedia) {
-      this.client.emit('post.process_media', {
-        postId: post.id,
-        assetIds,
-      });
-    }
+    this.client.emit('post.process_media', {
+      postId: post.id,
+      assetIds,
+    });
 
     return post;
   }
@@ -188,42 +191,6 @@ export class PostsService {
       where: { id: postId },
       data: updatePostDto,
     });
-  }
-
-  async submit(userId: string, postId: string): Promise<PostResult> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
-    if (!post) return new NotFoundError(`Post with id '${postId}' not found`);
-    if (post.authorId !== userId) {
-      return new UnauthorizedError('You can only submit your own work.');
-    }
-    if (!['DRAFT', 'NEEDS_CHANGES'].includes(post.visibility)) {
-      return new InvalidInputError(
-        'Only drafts or work needing changes can be submitted.',
-      );
-    }
-    if (post.mediaStatus !== 'READY') {
-      return new InvalidInputError(
-        'Wait for all media to finish processing before submitting.',
-      );
-    }
-
-    const membership =
-      await this.membershipsService.getActivePublishingMembership(
-        userId,
-        post.somaId,
-      );
-    if (!membership) {
-      return new UnauthorizedError(
-        'You no longer have an active creator membership in this Soma.',
-      );
-    }
-
-    const updatedPost = await this.prisma.post.update({
-      where: { id: postId },
-      data: { visibility: 'APPROVED', creatorMembershipId: membership.id },
-    });
-    this.client.emit('post.publish', { postId });
-    return updatedPost;
   }
 
   async delete(

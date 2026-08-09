@@ -1,6 +1,7 @@
-import { Controller, Logger } from '@nestjs/common';
-import { EventPattern, Payload } from '@nestjs/microservices';
+import { Controller, Inject, Logger } from '@nestjs/common';
+import { ClientProxy, EventPattern, Payload } from '@nestjs/microservices';
 import { PrismaService } from '../../prisma/prisma.service';
+import { QueryCacheService } from '../../common/cache/query-cache.service';
 import { StorageService } from '../media/storage/storage.service';
 
 import { ProcessMediaEvent, DeletePostEvent } from './types/post-events.type';
@@ -12,6 +13,8 @@ export class PostsWorkerController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    @Inject('RMQ_CLIENT') private readonly client: ClientProxy,
+    private readonly queryCache: QueryCacheService,
   ) {}
 
   @EventPattern('post.process_media')
@@ -19,10 +22,13 @@ export class PostsWorkerController {
     const { postId, assetIds } = data;
 
     if (!assetIds || assetIds.length === 0) {
-      await this.prisma.post.update({
-        where: { id: postId },
-        data: { mediaStatus: 'READY' },
+      const result = await this.prisma.post.updateMany({
+        where: { id: postId, visibility: 'DRAFT' },
+        data: { mediaStatus: 'READY', visibility: 'APPROVED' },
       });
+
+      if (result.count) this.client.emit('post.publish', { postId });
+
       return;
     }
 
@@ -93,10 +99,11 @@ export class PostsWorkerController {
 
       await tx.post.update({
         where: { id: postId },
-        data: { mediaStatus: 'READY' },
+        data: { mediaStatus: 'READY', visibility: 'APPROVED' },
       });
     });
 
+    this.client.emit('post.publish', { postId });
     this.logger.log(`Media for post ${postId} processed and ready for review.`);
   }
 
@@ -107,8 +114,16 @@ export class PostsWorkerController {
       include: { media: { include: { items: true } } },
     });
 
-    if (!post || post.visibility !== 'APPROVED' || post.mediaStatus !== 'READY')
+    if (
+      !post ||
+      post.visibility !== 'APPROVED' ||
+      post.mediaStatus !== 'READY'
+    ) {
+      this.logger.log(
+        `Mismatch: visibility=${post?.visibility}, mediaStatus=${post?.mediaStatus}`,
+      );
       return;
+    }
 
     for (const item of post.media?.items ?? []) {
       const publishedKey = await this.storageService.publishStagedObject(
@@ -130,6 +145,8 @@ export class PostsWorkerController {
       where: { id: post.id },
       data: { visibility: 'PUBLISHED' },
     });
+
+    await this.queryCache.invalidate(`query:post:${post.id}`);
   }
 
   @EventPattern('post.delete')

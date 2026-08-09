@@ -40,18 +40,22 @@ export class PostsResolver {
   @ResolveField(() => UserResponseDto)
   async author(@Parent() post: PostEntity) {
     const result = await this.usersService.findById(post.authorId);
+
     if ('message' in result) {
       throw new Error('Author not found');
     }
+
     return result;
   }
 
   @ResolveField(() => SomaEntity)
   async soma(@Parent() post: PostEntity) {
     const result = await this.somaService.findById(post.somaId);
+
     if ('message' in result) {
       throw new Error('Soma not found');
     }
+
     return result;
   }
 
@@ -61,6 +65,7 @@ export class PostsResolver {
     @CurrentUser() user: Express.User | null,
   ): Promise<number | null> {
     if (!user) return null;
+
     return this.votesService.getUserVoteValue(user.id, post.id);
   }
 
@@ -119,7 +124,12 @@ export class PostsResolver {
     @Args('id') id: string,
     @Args('data') updatePostDto: UpdatePostDto,
   ): Promise<PostResult> {
-    return this.postsService.update(user.id, user.platformRole, id, updatePostDto);
+    return this.postsService.update(
+      user.id,
+      user.platformRole,
+      id,
+      updatePostDto,
+    );
   }
 
   @Query(() => [PostEntity])
@@ -139,15 +149,6 @@ export class PostsResolver {
     @Args('id') id: string,
   ): Promise<PostResult> {
     return this.postsService.findStudioPost(user.id, id);
-  }
-
-  @Mutation(() => PostResultUnion)
-  @UseGuards(JwtAuthGuard)
-  async submitPost(
-    @CurrentUser() user: Express.User,
-    @Args('id') id: string,
-  ): Promise<PostResult> {
-    return this.postsService.submit(user.id, id);
   }
 
   @Mutation(() => PostResultUnion)
