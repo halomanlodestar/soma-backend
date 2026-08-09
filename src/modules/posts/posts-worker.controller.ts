@@ -125,10 +125,24 @@ export class PostsWorkerController {
       return;
     }
 
+    this.logger.log(
+      `Starting publication for post ${post.id} with ${post.media?.items.length ?? 0} media item(s).`,
+    );
+
     for (const item of post.media?.items ?? []) {
-      const publishedKey = await this.storageService.publishStagedObject(
-        item.s3Key,
-      );
+      let publishedKey: string;
+
+      try {
+        publishedKey = await this.storageService.publishStagedObject(
+          item.s3Key,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Publication failed for post ${post.id}, media item ${item.id}, staging key ${item.s3Key}.`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        throw error;
+      }
 
       await this.prisma.mediaItem.update({
         where: { id: item.id },
@@ -147,6 +161,7 @@ export class PostsWorkerController {
     });
 
     await this.queryCache.invalidate(`query:post:${post.id}`);
+    this.logger.log(`Post ${post.id} published successfully.`);
   }
 
   @EventPattern('post.delete')

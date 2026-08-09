@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
@@ -13,6 +13,7 @@ import type { PresignedUploadResult } from '../types/media.types';
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private readonly privateS3Client: S3Client;
   private readonly publicS3Client: S3Client;
   private readonly privateBucket: string;
@@ -116,25 +117,75 @@ export class StorageService {
 
   async publishStagedObject(stagingKey: string): Promise<string> {
     const publishedKey = this.getPublishedKey(stagingKey);
-    const stagedObject = await this.privateS3Client.send(
-      new GetObjectCommand({ Bucket: this.privateBucket, Key: stagingKey }),
-    );
+    let stagedObject;
+
+    try {
+      stagedObject = await this.privateS3Client.send(
+        new GetObjectCommand({ Bucket: this.privateBucket, Key: stagingKey }),
+      );
+    } catch (error) {
+      this.logStorageFailure('get staged object for publication', error, {
+        bucket: this.privateBucket,
+        key: stagingKey,
+      });
+
+      throw error;
+    }
 
     if (!stagedObject.Body) {
       throw new Error(`Storage object ${stagingKey} has no body`);
     }
 
-    await this.publicS3Client.send(
-      new PutObjectCommand({
-        Bucket: this.publicBucket,
-        Key: publishedKey,
-        Body: stagedObject.Body,
-        ContentType: stagedObject.ContentType,
-        ContentLength: stagedObject.ContentLength,
-      }),
-    );
+    try {
+      await this.publicS3Client.send(
+        new PutObjectCommand({
+          Bucket: this.publicBucket,
+          Key: publishedKey,
+          Body: stagedObject.Body,
+          ContentType: stagedObject.ContentType,
+          ContentLength: stagedObject.ContentLength,
+        }),
+      );
+    } catch (error) {
+      this.logStorageFailure('put published object', error, {
+        bucket: this.publicBucket,
+        key: publishedKey,
+        sourceBucket: this.privateBucket,
+        sourceKey: stagingKey,
+        contentLength: stagedObject.ContentLength,
+        contentType: stagedObject.ContentType,
+      });
+
+      throw error;
+    }
 
     return publishedKey;
+  }
+
+  private logStorageFailure(
+    operation: string,
+    error: unknown,
+    context: Record<string, string | number | undefined>,
+  ): void {
+    const s3Error = error as {
+      name?: string;
+      Code?: string;
+      $metadata?: {
+        httpStatusCode?: number;
+        requestId?: string;
+        extendedRequestId?: string;
+      };
+    };
+
+    this.logger.error({
+      message: `S3 ${operation} failed`,
+      ...context,
+      errorName: s3Error.name,
+      errorCode: s3Error.Code,
+      httpStatusCode: s3Error.$metadata?.httpStatusCode,
+      requestId: s3Error.$metadata?.requestId,
+      extendedRequestId: s3Error.$metadata?.extendedRequestId,
+    });
   }
 
   async deleteStagedObject(key: string): Promise<void> {
