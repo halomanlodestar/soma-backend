@@ -1,5 +1,35 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { ObjectType, Field, Float, ID, Int } from '@nestjs/graphql';
 import { MediaType } from '../../../prisma/generated/client';
+
+@ObjectType()
+export class MediaMetadata {
+  @Field(() => String, { nullable: true })
+  mimeType?: string | null;
+
+  @Field(() => Float, { nullable: true })
+  byteSize?: number | null;
+
+  @Field(() => Int, { nullable: true })
+  width?: number | null;
+
+  @Field(() => Int, { nullable: true })
+  height?: number | null;
+
+  @Field(() => Float, { nullable: true })
+  durationSeconds?: number | null;
+
+  @Field(() => Float, { nullable: true })
+  bitRate?: number | null;
+
+  @Field(() => String, { nullable: true })
+  container?: string | null;
+
+  @Field(() => String, { nullable: true })
+  videoCodec?: string | null;
+
+  @Field(() => String, { nullable: true })
+  audioCodec?: string | null;
+}
 
 @ObjectType()
 export class MediaItem {
@@ -14,6 +44,9 @@ export class MediaItem {
 
   @Field(() => String)
   originalUrl: string;
+
+  @Field(() => MediaMetadata, { nullable: true })
+  metadata?: MediaMetadata | null;
 
   @Field(() => Date)
   createdAt: Date;

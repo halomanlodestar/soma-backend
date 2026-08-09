@@ -1,5 +1,6 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import { UserStats } from '../../users/dto/user-response.dto';
+import { MediaMetadata } from '../../media/entities/media.entity';
 
 @ObjectType()
 export class FeedUserProfile {
@@ -14,7 +15,6 @@ export class FeedUserProfile {
 
   @Field(() => String, { nullable: true })
   coverUrl?: string | null;
-
 }
 
 @ObjectType()
@@ -63,6 +63,9 @@ export class FeedMediaItem {
 
   @Field(() => String)
   originalUrl: string;
+
+  @Field(() => MediaMetadata, { nullable: true })
+  metadata?: MediaMetadata | null;
 }
 
 @ObjectType()

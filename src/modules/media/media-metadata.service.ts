@@ -93,7 +93,11 @@ export class MediaMetadataService {
         mimeType,
         byteSize,
         checksum,
-        metadata: this.buildMetadata(probe),
+        metadata: {
+          mimeType,
+          byteSize,
+          ...this.buildMetadata(probe),
+        },
       };
     } finally {
       await rm(directory, { recursive: true, force: true });

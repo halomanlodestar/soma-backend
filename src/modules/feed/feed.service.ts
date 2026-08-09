@@ -71,7 +71,7 @@ export class FeedService {
         media: {
           include: {
             items: {
-              select: { type: true, originalUrl: true },
+              select: { type: true, originalUrl: true, metadata: true },
             },
           },
         },
@@ -132,7 +132,7 @@ export class FeedService {
           media: {
             include: {
               items: {
-                select: { type: true, originalUrl: true },
+                select: { type: true, originalUrl: true, metadata: true },
               },
             },
           },
